@@ -7,25 +7,190 @@ setmetatable(_G, {
 })
 
 
--- GloriedRage, GFink, tyzone
--- Used in Superball, Paintball Gun, and Slingshot client modules.
+local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
+local TOGGLE_ARC_KEY = Enum.KeyCode.C;
+local CHOOSE_TARGET_KEY = Enum.KeyCode.E;
+local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
 
-local HitModule = {}
 
-local Collections = game:GetService("CollectionService")
+local function create(class, properties)
+	local obj = Instance.new(class)
+	for key, value in next, properties do
+		if key == "Parent" then continue end
+		obj[key] = value;
+	end
+	obj.Parent = properties.Parent;
+	return obj;
+end
+
+
+---	Manages the cleaning of events and other things.
+-- Useful for encapsulating state and make deconstructors easy
+-- @classmod Maid
+-- @see Signal
+
+local Maid = {}
+Maid.ClassName = "Maid"
+
+--- Returns a new Maid object
+-- @constructor Maid.new()
+-- @treturn Maid
+function Maid.new()
+	return setmetatable({
+		_tasks = {}
+	}, Maid)
+end
+
+function Maid.isMaid(value)
+	return type(value) == "table" and value.ClassName == "Maid"
+end
+
+--- Returns Maid[key] if not part of Maid metatable
+-- @return Maid[key] value
+function Maid:__index(index)
+	if Maid[index] then
+		return Maid[index]
+	else
+		return self._tasks[index]
+	end
+end
+
+--- Add a task to clean up. Tasks given to a maid will be cleaned when
+--  maid[index] is set to a different value.
+-- @usage
+-- Maid[key] = (function)         Adds a task to perform
+-- Maid[key] = (event connection) Manages an event connection
+-- Maid[key] = (Maid)             Maids can act as an event connection, allowing a Maid to have other maids to clean up.
+-- Maid[key] = (Object)           Maids can cleanup objects with a `Destroy` method
+-- Maid[key] = nil                Removes a named task. If the task is an event, it is disconnected. If it is an object,
+--                                it is destroyed.
+function Maid:__newindex(index, newTask)
+	if Maid[index] ~= nil then
+		error(("'%s' is reserved"):format(tostring(index)), 2)
+	end
+
+	local tasks = self._tasks
+	local oldTask = tasks[index]
+
+	if oldTask == newTask then
+		return
+	end
+
+	tasks[index] = newTask
+
+	if oldTask then
+		if type(oldTask) == "function" then
+			oldTask()
+		elseif typeof(oldTask) == "RBXScriptConnection" then
+			oldTask:Disconnect()
+		elseif oldTask.Destroy then
+			oldTask:Destroy()
+		end
+	end
+end
+
+--- Same as indexing, but uses an incremented number as a key.
+-- @param task An item to clean
+-- @treturn number taskId
+function Maid:GiveTask(task)
+	if not task then
+		error("Task cannot be false or nil", 2)
+	end
+
+	local taskId = #self._tasks+1
+	self[taskId] = task
+
+	if type(task) == "table" and (not task.Destroy) then
+		warn("[Maid.GiveTask] - Gave table task without .Destroy\n\n" .. debug.traceback())
+	end
+
+	return taskId
+end
+
+function Maid:GivePromise(promise)
+	if not promise:IsPending() then
+		return promise
+	end
+
+	local newPromise = promise.resolved(promise)
+	local id = self:GiveTask(newPromise)
+
+	-- Ensure GC
+	newPromise:Finally(function()
+		self[id] = nil
+	end)
+
+	return newPromise
+end
+
+--- Cleans up all tasks.
+-- @alias Destroy
+function Maid:DoCleaning()
+	local tasks = self._tasks
+
+	-- Disconnect all events first as we know this is safe
+	for index, task in pairs(tasks) do
+		if typeof(task) == "RBXScriptConnection" then
+			tasks[index] = nil
+			task:Disconnect()
+		end
+	end
+
+	-- Clear out tasks table completely, even if clean up tasks add more tasks to the maid
+	local index, task = next(tasks)
+	while task ~= nil do
+		tasks[index] = nil
+		if type(task) == "function" then
+			task()
+		elseif typeof(task) == "RBXScriptConnection" then
+			task:Disconnect()
+		elseif task.Destroy then
+			task:Destroy()
+		end
+		index, task = next(tasks)
+	end
+end
+
+--- Alias for DoCleaning()
+-- @function Destroy
+Maid.Destroy = Maid.DoCleaning
+
+
+
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
+
+local Player = Players.LocalPlayer
+local Character = nil; --will be initialized later
+local tool = Character:WaitForChild("Superball")
 
 local Kill = require(_G.BB.Modules:WaitForChild("Kill"))
-local Aesthetics = require(_G.BB.Modules:WaitForChild("Aesthetics"))
 local PSPV = require(_G.BB.Modules.Security:WaitForChild("PSPV"))
 local HitRemote = _G.BB.Remotes:WaitForChild("Hit")
 local Settings = _G.BB.Settings
+local Aesthetics = require(_G.BB.Modules:WaitForChild("Aesthetics"))
+local SafeWait = require(_G.BB.Modules.Security:WaitForChild("SafeWait"))
+local MakeSuperball = require(_G.BB.ClientObjects:WaitForChild("MakeSuperball"))
 
-local PaintballColorCallback = require(_G.BB.Modules.Callbacks.PaintballColor)
-local PBG_Classes = {"Accoutrement", "Tool", "Accessory"} -- if hit.Parent:IsA... then color it
+local ReloadTime = _G.BB.Settings.Superball.ReloadTime
+local UpdateEvent = tool:WaitForChild("Update")
+
 
 local FPS = 0
+local maid = Maid.new();
+local playerData = {}
+local choosingTarget = false;
+
+
+local settings = {
+	aimbot = false,
+	arc = "low",
+	targetPlayer = nil,
+	panicMode = false
+}
+
 
 if RunService:IsClient() then
 	RunService.Stepped:Connect(
@@ -35,35 +200,19 @@ if RunService:IsClient() then
 	)
 end
 
+
+local HitModule = {};
+
+
 function IsAcceptableHit(player, hit)
 	return hit.Parent:FindFirstChildWhichIsA("Humanoid") or 
 		not (
-		Collections:HasTag(hit,"Projectile") 
+		CollectionService:HasTag(hit,"Projectile") 
 			or (hit.CanCollide == false) 
 			or hit.Name == "Handle"
 	)
 end
 
-local function PaintballDamageMultiplier(Projectile, HitPart)
-	
-	local properPart = Settings.PaintballGun.MultiplierPartNames[HitPart.Name]
-		
-	if Projectile.ProjectileType.Value == "PaintballGun" and properPart then
-		
-		Projectile.Damage.Value *= 1 + 2 / 3
-		
-		return Projectile.Damage.Value
-	end
-	return false
-end
-
---[[
-	This function handles the hit detection for both the Superball and Slingshot.
-	Incorporates hit detection, damage and indicators all on the client to maximize
-	experience. 
-]]
-
-local HitModule = {};
 
 function HitModule:HandleHitDetection(projectile)
 	--print("__________")
@@ -93,7 +242,6 @@ function HitModule:HandleHitDetection(projectile)
 		
 		local humanoid = hit.Parent:FindFirstChildWhichIsA("Humanoid")
 		local Player = Players:GetPlayerFromCharacter(hit.Parent)
-		local hat = table.find(PBG_Classes, hit.Parent.ClassName)
 
 		local p1 = projectile.Position
 		local v1 = projectile.Velocity
@@ -125,8 +273,6 @@ function HitModule:HandleHitDetection(projectile)
 			if Kill:CanDamage(player, humanoid, false) then
 				hitHumanoid = true
 				FireToServer = true
-
-				PaintballDamageMultiplier(projectile, hit)
 				
 				-- Instant damage
 				if Settings.InstantDamage then
@@ -165,16 +311,6 @@ function HitModule:HandleHitDetection(projectile)
 					if not Sound.Playing then
 						Sound:Play()
 					end
-				end
-				
-				if ProjectileType == "PaintballGun" and PaintballColorCallback(hit, player) and Settings.InstantDamage then
-					FireToServer = true
-					
-					projectile.Ready.Value = false
-					Aesthetics:PaintballColor(hit, projectile.Color)
-					Aesthetics:ExplodePaintball(projectile)
-					
-					TouchedConnection:Disconnect()
 				end
 			end
 		elseif CanHalfDamage and IsAcceptableHit(player,hit) then
@@ -237,30 +373,15 @@ function HitModule:HandleHitDetection(projectile)
 	end)
 end
 
-local CollectionService = game:GetService("CollectionService")
+
 
 local Superball = {}
-
-local Players = game:GetService("Players")
-
-local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-
-local Aesthetics = require(_G.BB.Modules:WaitForChild("Aesthetics"))
-local SafeWait = require(_G.BB.Modules.Security:WaitForChild("SafeWait"))
-local MakeSuperball = require(_G.BB.ClientObjects:WaitForChild("MakeSuperball"))
-
-local tool = Character:WaitForChild("Superball")
-
-local ReloadTime = _G.BB.Settings.Superball.ReloadTime
-local UpdateEvent = tool:WaitForChild("Update")
-
-local targetPlayer = nil;
 
 local function canSBJump(Character)
 	return (_G.BB.Settings.SuperballJump 
 		and Character.Humanoid.FloorMaterial == Enum.Material.Air)
 end
+
 
 local function getDir(player, pos)
 	local dir = Vector3.new(0, 0, 0)
@@ -296,7 +417,7 @@ function Superball:Fire(Superball, SpawnDistance, count)
 	local Speed = _G.BB.Settings.Superball.Speed
 	local ShootInsideBricks = _G.BB.Settings.Superball.ShootInsideBricks
 
-	local dir = getDir(targetPlayer, targetPlayer.Character.Head.Position);
+	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position);
 
 	local now = time()
 	local SpawnPosition = self.Head.Position + dir * SpawnDistance
@@ -324,15 +445,10 @@ function Superball:Fire(Superball, SpawnDistance, count)
 
 	self.Delete(Superball, 8) -- exists for 8 seconds		
 
-	print("\nDEBUG OF CLIENTOBJECT MODULES")
-	for _, child in next, _G.BB.ClientObjects:GetChildren() do
-		print(child.Name, "\t", child.ClassName)
-	end
-	print("\nEND OF DEBUG OF CLIENTOBJECT MODULES")
-
-    HitModule:HandleHitDetection(Superball, count)
+    HitModule:HandleHitDetection(Superball)
 	return LaunchCF.Position, Velocity, now
 end
+
 
 function Superball:Shoot()
 	if tool.Enabled then
@@ -360,6 +476,7 @@ function Superball:Shoot()
 	end
 end
 
+
 function Superball:Init()
 	self.Hit = require(_G.BB.Modules:WaitForChild("Hit"))
 	self.Delete = require(_G.BB.ClientObjects:WaitForChild("Delete"))
@@ -379,83 +496,135 @@ function Superball:Init()
 	HandleCrosshair(tool)
 
 	tool.Enabled = true
+end
 
-	task.spawn(function()
-		while task.wait() and Character.Parent == workspace do
-		    if tool.Parent ~= Character or not targetPlayer then continue end;
-		    
-			Superball:Shoot()
+
+local function initializePlayer(player)
+	local data = {};
+
+	data.selectorPart = create("Part", {
+		Size = Vector3.new(10, 150, 10),
+		Transparency = 0.8,
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Anchored = true
+	})
+
+	CollectionService:AddTag(data.selectorPart, "SelectorPart")
+
+	playerData[player] = data;
+end
+
+
+local function updateCharacterVariable()
+	Character = Player.Character or Player.CharacterAdded:Wait();
+	local dead = false;
+	Character:WaitForChild("Humanoid").Died:Connect(function()
+		if dead then return end;
+		dead = true;
+		Player.CharacterAdded:Wait()
+		updateCharacterVariable();
+	end)
+end;
+
+
+local function main()
+	Superball:Init()
+
+
+	updateCharacterVariable();
+
+
+	--need to hook the real superball module's fire function so that it won't ever get called unless aimbot is turned off
+	do
+		local realToolModule = require(tool:WaitForChild("Client"):WaitForChild("SuperballClient"))
+		local oldNameCall = nil;
+		oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
+			local args = {...}
+			local namecallMethod = getnamecallmethod();
+
+			if not checkcaller() and self == realToolModule and namecallMethod == "Fire" and settings.aimbot == true then
+				return nil;
+			else
+				return oldNameCall(self, ...)
+			end;
+		end)
+	end
+
+
+	Players.PlayerAdded:Connect(initializePlayer)
+	for _, player in next, Players:GetPlayers() do
+		initializePlayer(player)
+	end
+
+
+	Players.PlayerRemoving:Connect(function(player)
+		local data = playerData[player];
+
+		data.selectorPart:Destroy();
+
+		table.clear(data);
+		playerData[player] = nil;
+	end)
+
+
+	RunService.RenderStepped:Connect(function()
+		for player, data in next, playerData do
+			local character = player.Character;
+			local head = character and character:FindFirstChild("Head")
+			if not head then continue end
+
+			if settings.panicMode then
+				data.selectorPart.Parent = nil;
+			else
+				data.selectorPart.CFrame = CFrame.new(head.Position)
+				if settings.targetPlayer == player then
+					data.selectorPart.Color = Color3.new(0, 1, 0);
+				else
+					data.selectorPart.Color = Color3.new(1, 0, 0);
+				end
+				data.selectorPart.Parent = workspace;
+			end
+		end
+	end)
+
+
+	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+		local key = input.KeyCode;
+		if key == TOGGLE_AIMBOT_KEY then
+			settings.aimbot = not settings.aimbot;
+		elseif key == TOGGLE_ARC_KEY then
+			settings.arc = settings.arc == "high" and "low" or "high"
+		elseif key == TOGGLE_PANIC_MODE_KEY then
+			settings.panicMode = not settings.panicMode;
+			if settings.panicMode == true then
+				settings.aimbot = false;
+				settings.targetPlayer = nil;
+			end
+		elseif key == CHOOSE_TARGET_KEY then
+			choosingTarget = true;
+		end
+
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and settings.aimbot == true then
+			if tool.Parent == Character then
+				Superball:Shoot();
+			end
+
+			if choosingTarget == true then
+				local targetPart = Player:GetMouse().Target;
+				if targetPart and CollectionService:HasTag(targetPart, "SelectorPart") then
+					for player, data in next, playerData do
+						if data.selectorPart == targetPart then
+							settings.targetPlayer = player;
+							break;
+						end
+					end
+				end
+			end
+
 		end
 	end)
 end
 
-Superball:Init()
 
---setup hbe;
-
-local parts = {};
-
-game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
-        local target = game.Players.LocalPlayer:GetMouse().Target;
-        if not target then return end;
-        if target and CollectionService:HasTag(target, "Box") then
-            local oldPlayer = targetPlayer;
-            if oldPlayer then
-                parts[oldPlayer].Color = Color3.new(1, 0, 0);
-                targetPlayer = nil;
-                if oldPlayer == player then return end;
-            end
-            
-            for x, y in next, parts do
-                if y == target then
-                    targetPlayer = x;
-                    break;
-                end;
-            end;
-            
-            target.Color = Color3.new(0, 1, 0)
-        end
-    end
-end)
-
-
-while true do
-    for _, part in next, parts do
-        part:Destroy();
-    end
-    table.clear(parts);
-    
-    if Player.Character.Parent == nil then
-        break;
-    end
-    
-    for _, player in next, Players:GetPlayers() do
-        local character = player.Character;
-        local humanoid = character and character.Humanoid;
-        if humanoid and humanoid.Health > 0 and player ~= Player then
-            local p = Instance.new("Part")
-            p.Size = Vector3.new(20, 500, 20)
-            p.Transparency = 0.85;
-            p.Color = Color3.new(1, 0, 0)
-            p.Material = Enum.Material.Neon;
-            CollectionService:AddTag(p, "Box")
-            p.CanCollide = false;
-            p.Anchored = true;
-            
-            p.Parent = workspace;
-            
-            task.spawn(function()
-                while character.Parent and character:FindFirstChild("HumanoidRootPart") and p.Parent do
-                    p.CFrame = character.HumanoidRootPart.CFrame;
-                    game:GetService("RunService").RenderStepped:Wait()
-                end
-            end)
-            
-            parts[player] = p;
-        end
-    end
-    
-    task.wait(3)
-end
-    
+main();
