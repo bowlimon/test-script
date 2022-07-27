@@ -5,8 +5,6 @@ setmetatable(_G, {
     end
 })
 
-print(_G.BB)
-
 local CollectionService = game:GetService("CollectionService")
 
 local Superball = {}
@@ -93,6 +91,9 @@ function Superball:Fire(Superball, SpawnDistance, count)
 	self.handle.Boing:Play() -- or handle.Boing:Play()
 
 	self.Delete(Superball, 8) -- exists for 8 seconds		
+	for _, child in next, _G.BB.ClientObjects:GetChildren() do
+		print(child.Name)
+	end
     self.Hit:HandleHitDetection(Superball, count)
 	return LaunchCF.Position, Velocity, now
 end
@@ -160,12 +161,9 @@ local parts = {};
 
 game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
     if input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
-        print("hi")
         local target = game.Players.LocalPlayer:GetMouse().Target;
         if not target then return end;
-        print(target:GetFullName())
         if target and CollectionService:HasTag(target, "Box") then
-            print("hit")
             local oldPlayer = targetPlayer;
             if oldPlayer then
                 parts[oldPlayer].Color = Color3.new(1, 0, 0);
