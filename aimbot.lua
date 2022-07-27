@@ -529,10 +529,10 @@ end;
 
 
 local function main()
-	Superball:Init()
-
-
 	updateCharacterVariable();
+
+
+	Superball:Init()
 
 
 	--need to hook the real superball module's fire function so that it won't ever get called unless aimbot is turned off
