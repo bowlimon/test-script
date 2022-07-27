@@ -164,7 +164,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Player = Players.LocalPlayer
 local Character = nil; --will be initialized later
-local tool = Character:WaitForChild("Superball")
+local tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
 
 local Kill = require(_G.BB.Modules:WaitForChild("Kill"))
 local PSPV = require(_G.BB.Modules.Security:WaitForChild("PSPV"))
