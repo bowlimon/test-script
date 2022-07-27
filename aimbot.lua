@@ -1,6 +1,7 @@
 
 setmetatable(_G, {
     __index = function(self, key)
+		print(debug.traceback("_G accessed. Call stack:"))
         return getrenv()._G[key]
     end
 })
