@@ -91,9 +91,13 @@ function Superball:Fire(Superball, SpawnDistance, count)
 	self.handle.Boing:Play() -- or handle.Boing:Play()
 
 	self.Delete(Superball, 8) -- exists for 8 seconds		
+
+	print("\nDEBUG OF CLIENTOBJECT MODULES")
 	for _, child in next, _G.BB.ClientObjects:GetChildren() do
-		print(child.Name)
+		print(child.Name, "\t", child.ClassName)
 	end
+	print("\nEND OF DEBUG OF CLIENTOBJECT MODULES")
+
     self.Hit:HandleHitDetection(Superball, count)
 	return LaunchCF.Position, Velocity, now
 end
