@@ -1,17 +1,11 @@
 
-setmetatable(_G, {
+
+setmetatable(getrenv()._G, {
     __index = function(self, key)
-		print(debug.traceback("synapse _G accessed with key " .. key .. ". Call stack:"))
+		print(debug.traceback("real _G accessed with key "..key..", Call stack:"))
         return rawget(getrenv()._G, key)
     end
 })
-
--- setmetatable(getrenv()._G, {
---     __index = function(self, key)
--- 		print(debug.traceback("real _G accessed. Call stack:"))
---         return rawget(getrenv()._G, key)
---     end
--- })
 
 local CollectionService = game:GetService("CollectionService")
 
