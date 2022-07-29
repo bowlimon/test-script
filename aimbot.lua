@@ -278,6 +278,7 @@ local function getDir(player, pos)
 	end
 	
 	local t = 0;
+	local sign = settings.arc == "high" and 1 or -1;
 
 	for i = 1, 3 do
 		local y_pred = math.max(playerMinY, pos.Y + (math.max(0, player.Character.Torso.Velocity.y)*t + 1/2*g*t^2))
@@ -292,15 +293,15 @@ local function getDir(player, pos)
 		local discriminant = b^2 - 4*a*c;
 
 		if discriminant < 0 then
-			return Vector3.new(0, 0, 0);
+			return Random.new():NextUnitVector();
 		else
-			t = math.sqrt((-b - math.sqrt(discriminant)) / (2*a));
+			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
 		
 		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
 	end
 
-	return dir, t;
+	return dir;
 end
 
 
@@ -529,7 +530,7 @@ local function main()
 
 		gui.Enabled = not settings.panicMode;
 	end)
-	
+
 
 	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
 		if gpe then return end
