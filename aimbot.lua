@@ -8,7 +8,6 @@ setmetatable(_G, {
 
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.C;
-local CHOOSE_TARGET_KEY = Enum.KeyCode.E;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
 local MOVEDIRECTION_MULTIPLIER_INCREMENT = 0.3;
 
@@ -439,7 +438,9 @@ function Superball:Fire(Superball, SpawnDistance, count)
 
 	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Torso.Position);
 
-	print("dir =", dir)
+	if dir:FuzzyEq(Vector3.new()) then
+		return;
+	end
 
 	local now = time()
 	local SpawnPosition = Character.Head.Position + dir * SpawnDistance
@@ -490,6 +491,11 @@ function Superball:Shoot()
 		local Superball = MakeSuperball(Player, CollisionGroup, count, tool.Handle.Color)
 
 		local position, velocity, now = self:Fire(Superball, SpawnDistance, count)
+
+		if not position or not velocity or not now then
+			return;
+		end
+
 		UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
 
 		SafeWait.wait(ReloadTime)
@@ -616,10 +622,7 @@ local function main()
 		table.clear(data);
 		playerData[player] = nil;
 	end)
-
-	local lastReading = 0;
-	local i = 0;
-	local readingTaken = false;
+	
 	RunService.RenderStepped:Connect(function()
 		local mouseTarget = Player:GetMouse().Target;
 
@@ -637,7 +640,7 @@ local function main()
 				settings.targetPlayer = player;
 			end
 
-			if settings.panicMode then
+			if settings.panicMode or humanoid.Health <= 0 or Player:DistanceFromCharacter(character.Torso) > 40_000/workspace.Gravity then
 				data.selectorPart.Parent = nil;
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
@@ -655,28 +658,23 @@ local function main()
 		"\nAimbotEnabled = "..tostring(settings.aimbot).." ["..TOGGLE_AIMBOT_KEY.Name.."]"..
 		"\nArc = "..tostring(settings.arc).." ["..TOGGLE_ARC_KEY.Name.."]"..
 		"\nTargetPlayer = "..tostring(settings.targetPlayer and settings.targetPlayer.Name or "Nobody!")..
-		"\nMoveDirectionMultiplier = "..(tostring(settings.moveDirectionMultiplier)):format("%.2f").." [edit with +/-]"
+		"\nMoveDirectionMultiplier = "..(settings.moveDirectionMultiplier):format("%.2f").." [edit with +/-]"
 
 		gui.Enabled = not settings.panicMode;
-
-		if readingTaken then
-			lastReading = tick();
-			readingTaken = false;
-		end
 	end)
 
 
-	task.spawn(function()
-		local i = 0;
-		while task.wait(0.1) do
-			i = math.max(1, (i+1)%11)
-			for player, data in next, playerData do
-				if player.Character and player.Character:FindFirstChildWhichIsA("Humanoid") then
-					data.moveDirectionData.directions[i] = player.Character.Humanoid.MoveDirection
-				end
-			end
-		end
-	end)
+	-- task.spawn(function()
+	-- 	local i = 0;
+	-- 	while task.wait(0.1) do
+	-- 		i = math.max(1, (i+1)%11)
+	-- 		for player, data in next, playerData do
+	-- 			if player.Character and player.Character:FindFirstChildWhichIsA("Humanoid") then
+	-- 				data.moveDirectionData.directions[i] = player.Character.Humanoid.MoveDirection
+	-- 			end
+	-- 		end
+	-- 	end
+	-- end)
 
 
 	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
@@ -693,8 +691,8 @@ local function main()
 				settings.aimbot = false;
 				settings.targetPlayer = nil;
 			end
-		elseif key == Enum.KeyCode.Equals or key == Enum.KeyCode.Minus then
-			local sign = key == Enum.KeyCode.Equals and 1 or -1;
+		elseif key == Enum.KeyCode.E or key == Enum.KeyCode.Q then
+			local sign = key == Enum.KeyCode.E and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
 
