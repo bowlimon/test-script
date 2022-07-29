@@ -10,6 +10,7 @@ local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.C;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
 local MOVEDIRECTION_MULTIPLIER_INCREMENT = 0.3;
+local AIM_PART = "Head"
 
 
 local function create(class, properties)
@@ -250,6 +251,9 @@ end
 
 local function getDir(player, pos)
 	local dir = Vector3.new(0, 0, 0)
+	local g = -workspace.Gravity;
+	local k = player.Character.Humanoid.MoveDirection*16.2;
+	local torso = player.Character.Torso;
 
 	-- local averageMoveDirection = Vector3.new(0, 0, 0);
 	-- local averageHeadHeight = 0;
@@ -266,14 +270,18 @@ local function getDir(player, pos)
 	-- end
 
 	-- pos = Vector3.new(pos.X, averageHeadHeight, pos.Z);
-
-	local g = -workspace.Gravity;
-	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
-
+	
+	local playerMinY = nil; do
+		local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
+		local hit, pos = workspace:FindPartOnRay(r, player.Character, true, false)
+		playerMinY = (pos.Y or -9999999) + 2 + 2 + 1/2;
+	end
+	
 	local t = 0;
 
-	for i = 1, 10 do
-		local d = (pos + k*t) - (Character:GetPrimaryPartCFrame().Position + 5*dir) 
+	for i = 1, 3 do
+		local y_pred = math.max(playerMinY, pos.Y + (math.max(0, player.Character.Torso.Velocity.y)*t + 1/2*g*t^2))
+		local d = (k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character:GetPrimaryPartCFrame().Position + 5*dir)
 
 		local dx, dy, dz = d.x, d.y, d.z;
 
@@ -282,17 +290,17 @@ local function getDir(player, pos)
 		local c = dx^2 + dy^2 + dz^2;
 
 		local discriminant = b^2 - 4*a*c;
-		local sign = settings.arc == "low" and -1 or 1;
 
 		if discriminant < 0 then
 			return Vector3.new();
 		else
-			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
+			t = math.sqrt((-b - math.sqrt(discriminant)) / (2*a));
 		end
+		
 		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
 	end
 
-	return dir;
+	return dir, t;
 end
 
 
@@ -300,7 +308,7 @@ function Superball:Fire(Superball, SpawnDistance, count)
 	local Speed = _G.BB.Settings.Superball.Speed
 	local ShootInsideBricks = _G.BB.Settings.Superball.ShootInsideBricks
 
-	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Torso.Position);
+	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character:FindFirstChild(AIM_PART).Position);
 
 	if dir:FuzzyEq(Vector3.new()) then
 		return;
@@ -504,7 +512,7 @@ local function main()
 				settings.targetPlayer = player;
 			end
 
-			if settings.panicMode or humanoid.Health <= 0 or Player:DistanceFromCharacter(character.Torso.Position) > 40_000/workspace.Gravity then
+			if settings.panicMode or humanoid.Health <= 0 or Player:DistanceFromCharacter(character.Torso.Position) > 40_000/workspace.Gravity or character:FindFirstChildWhichIsA("ForceField", true) then
 				data.selectorPart.Parent = nil;
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
