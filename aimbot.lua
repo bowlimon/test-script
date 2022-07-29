@@ -388,24 +388,25 @@ end
 local function getDir(player, pos)
 	local dir = Vector3.new(0, 0, 0)
 
-	local averageMoveDirection = Vector3.new(0, 0, 0);
-	local averageHeadHeight = 0;
-	do
-		local sumDir = Vector3.new(0, 0, 0);
-		local sum_y = 0;
-		local moveDirs = playerData[player].moveDirectionData.directions;
-		for _, moveDir in next, moveDirs do
-			sumDir += Vector3.new(moveDir.X, 0, moveDir.Z)
-			sum_y += moveDir.Y;
-		end
-		averageMoveDirection = sumDir / #moveDirs;
-		averageHeadHeight = sum_y / #moveDirs;
-	end
+	-- local averageMoveDirection = Vector3.new(0, 0, 0);
+	-- local averageHeadHeight = 0;
+	-- do
+	-- 	local sumDir = Vector3.new(0, 0, 0);
+	-- 	local sum_y = 0;
+	-- 	local moveDirs = playerData[player].moveDirectionData.directions;
+	-- 	for _, moveDir in next, moveDirs do
+	-- 		sumDir += Vector3.new(moveDir.X, 0, moveDir.Z)
+	-- 		sum_y += moveDir.Y;
+	-- 	end
+	-- 	averageMoveDirection = sumDir / #moveDirs;
+	-- 	averageHeadHeight = sum_y / #moveDirs;
+	-- end
 
 	-- pos = Vector3.new(pos.X, averageHeadHeight, pos.Z);
 
 	local g = -workspace.Gravity;
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
+	local freefall_multiplier = player.Character.Humanoid.FloorMaterial == Enum.Material.Air and 1 or 0;
 	local t = 0;
 
 	for i = 1, 2 do
@@ -425,7 +426,7 @@ local function getDir(player, pos)
 		else
 			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
-		dir = Vector3.new(dx/t, dy/t - 1/2*g*t^2, dz/t).Unit;
+		dir = Vector3.new(dx/t, dy/t - (1/2*g*t^2 * freefall_multiplier), dz/t).Unit;
 	end
 
 	return dir;
