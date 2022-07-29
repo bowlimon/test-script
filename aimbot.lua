@@ -269,11 +269,6 @@ local function getDir(player, pos)
 
 	local g = -workspace.Gravity;
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
-	local vy = player.Character.Torso.Velocity.Y
-	if math.abs(vy) < 0.2 then
-		vy = 0;
-	end
-	local h = math.sign(vy) ~= -1 and function(t) return 1/2*g*t end or function(t) return -1/2*g*t end;
 
 	local t = 0;
 
@@ -294,7 +289,7 @@ local function getDir(player, pos)
 		else
 			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
-		dir = Vector3.new(dx/t, dy/t - h(t), dz/t).Unit;
+		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
 	end
 
 	return dir;
