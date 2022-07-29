@@ -658,7 +658,7 @@ local function main()
 		"\nAimbotEnabled = "..tostring(settings.aimbot).." ["..TOGGLE_AIMBOT_KEY.Name.."]"..
 		"\nArc = "..tostring(settings.arc).." ["..TOGGLE_ARC_KEY.Name.."]"..
 		"\nTargetPlayer = "..tostring(settings.targetPlayer and settings.targetPlayer.Name or "Nobody!")..
-		"\nMoveDirectionMultiplier = "..(settings.moveDirectionMultiplier):format("%.2f").." [edit with +/-]"
+		("\nMoveDirectionMultiplier = %.2f"):format(settings.moveDirectionMultiplier).." [edit with +/-]"
 
 		gui.Enabled = not settings.panicMode;
 	end)
