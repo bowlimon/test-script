@@ -22,141 +22,6 @@ local function create(class, properties)
 	return obj;
 end
 
-
----	Manages the cleaning of events and other things.
--- Useful for encapsulating state and make deconstructors easy
--- @classmod Maid
--- @see Signal
-
-local Maid = {}
-Maid.ClassName = "Maid"
-
---- Returns a new Maid object
--- @constructor Maid.new()
--- @treturn Maid
-function Maid.new()
-	return setmetatable({
-		_tasks = {}
-	}, Maid)
-end
-
-function Maid.isMaid(value)
-	return type(value) == "table" and value.ClassName == "Maid"
-end
-
---- Returns Maid[key] if not part of Maid metatable
--- @return Maid[key] value
-function Maid:__index(index)
-	if Maid[index] then
-		return Maid[index]
-	else
-		return self._tasks[index]
-	end
-end
-
---- Add a task to clean up. Tasks given to a maid will be cleaned when
---  maid[index] is set to a different value.
--- @usage
--- Maid[key] = (function)         Adds a task to perform
--- Maid[key] = (event connection) Manages an event connection
--- Maid[key] = (Maid)             Maids can act as an event connection, allowing a Maid to have other maids to clean up.
--- Maid[key] = (Object)           Maids can cleanup objects with a `Destroy` method
--- Maid[key] = nil                Removes a named task. If the task is an event, it is disconnected. If it is an object,
---                                it is destroyed.
-function Maid:__newindex(index, newTask)
-	if Maid[index] ~= nil then
-		error(("'%s' is reserved"):format(tostring(index)), 2)
-	end
-
-	local tasks = self._tasks
-	local oldTask = tasks[index]
-
-	if oldTask == newTask then
-		return
-	end
-
-	tasks[index] = newTask
-
-	if oldTask then
-		if type(oldTask) == "function" then
-			oldTask()
-		elseif typeof(oldTask) == "RBXScriptConnection" then
-			oldTask:Disconnect()
-		elseif oldTask.Destroy then
-			oldTask:Destroy()
-		end
-	end
-end
-
---- Same as indexing, but uses an incremented number as a key.
--- @param task An item to clean
--- @treturn number taskId
-function Maid:GiveTask(task)
-	if not task then
-		error("Task cannot be false or nil", 2)
-	end
-
-	local taskId = #self._tasks+1
-	self[taskId] = task
-
-	if type(task) == "table" and (not task.Destroy) then
-		warn("[Maid.GiveTask] - Gave table task without .Destroy\n\n" .. debug.traceback())
-	end
-
-	return taskId
-end
-
-function Maid:GivePromise(promise)
-	if not promise:IsPending() then
-		return promise
-	end
-
-	local newPromise = promise.resolved(promise)
-	local id = self:GiveTask(newPromise)
-
-	-- Ensure GC
-	newPromise:Finally(function()
-		self[id] = nil
-	end)
-
-	return newPromise
-end
-
---- Cleans up all tasks.
--- @alias Destroy
-function Maid:DoCleaning()
-	local tasks = self._tasks
-
-	-- Disconnect all events first as we know this is safe
-	for index, task in pairs(tasks) do
-		if typeof(task) == "RBXScriptConnection" then
-			tasks[index] = nil
-			task:Disconnect()
-		end
-	end
-
-	-- Clear out tasks table completely, even if clean up tasks add more tasks to the maid
-	local index, task = next(tasks)
-	while task ~= nil do
-		tasks[index] = nil
-		if type(task) == "function" then
-			task()
-		elseif typeof(task) == "RBXScriptConnection" then
-			task:Disconnect()
-		elseif task.Destroy then
-			task:Destroy()
-		end
-		index, task = next(tasks)
-	end
-end
-
---- Alias for DoCleaning()
--- @function Destroy
-Maid.Destroy = Maid.DoCleaning
-
-
-
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
@@ -180,7 +45,6 @@ local UpdateEvent = nil; --will be inited later
 
 
 local FPS = 0
-local maid = Maid.new();
 local playerData = {}
 
 
@@ -189,7 +53,7 @@ local settings = {
 	arc = "low",
 	targetPlayer = nil,
 	panicMode = false,
-	moveDirectionMultiplier = 18.5;
+	moveDirectionMultiplier = 16.2;
 }
 
 
@@ -405,10 +269,15 @@ local function getDir(player, pos)
 
 	local g = -workspace.Gravity;
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
-	local freefall_multiplier = math.sign(player.Character.Torso.Velocity.Y) == -1 and 1 or 0;
+	local vy = player.Character.Torso.Velocity.Y
+	if math.abs(vy) < 0.2 then
+		vy = 0;
+	end
+	local h = math.sign(vy) ~= -1 and function(t) return 1/2*g*t end or function(t) return -1/2*g*t end;
+
 	local t = 0;
 
-	for i = 1, 2 do
+	for i = 1, 10 do
 		local d = (pos + k*t) - (Character:GetPrimaryPartCFrame().Position + 5*dir) 
 
 		local dx, dy, dz = d.x, d.y, d.z;
@@ -425,7 +294,7 @@ local function getDir(player, pos)
 		else
 			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
-		dir = Vector3.new(dx/t, dy/t - (1/2*g*t^2 * freefall_multiplier), dz/t).Unit;
+		dir = Vector3.new(dx/t, dy/t - h(t), dz/t).Unit;
 	end
 
 	return dir;
