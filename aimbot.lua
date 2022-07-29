@@ -622,7 +622,7 @@ local function main()
 		table.clear(data);
 		playerData[player] = nil;
 	end)
-	
+
 	RunService.RenderStepped:Connect(function()
 		local mouseTarget = Player:GetMouse().Target;
 
@@ -640,7 +640,7 @@ local function main()
 				settings.targetPlayer = player;
 			end
 
-			if settings.panicMode or humanoid.Health <= 0 or Player:DistanceFromCharacter(character.Torso) > 40_000/workspace.Gravity then
+			if settings.panicMode or humanoid.Health <= 0 or Player:DistanceFromCharacter(character.Torso.Position) > 40_000/workspace.Gravity then
 				data.selectorPart.Parent = nil;
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
