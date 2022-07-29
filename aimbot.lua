@@ -405,7 +405,7 @@ local function getDir(player, pos)
 
 	local g = -workspace.Gravity;
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
-	local freefall_multiplier = player.Character.Humanoid.FloorMaterial == Enum.Material.Air and 1 or 0;
+	local freefall_multiplier = math.sign(player.Character.Torso.Velocity.Y) == -1 and 1 or 0;
 	local t = 0;
 
 	for i = 1, 2 do
