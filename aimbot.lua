@@ -292,7 +292,7 @@ local function getDir(player, pos)
 		local discriminant = b^2 - 4*a*c;
 
 		if discriminant < 0 then
-			return Vector3.new();
+			return Vector3.new(0, 0, 0);
 		else
 			t = math.sqrt((-b - math.sqrt(discriminant)) / (2*a));
 		end
@@ -304,18 +304,18 @@ local function getDir(player, pos)
 end
 
 
-function Superball:Fire(Superball, SpawnDistance, count)
+function Superball:Fire(Superball)
 	local Speed = _G.BB.Settings.Superball.Speed
 	local ShootInsideBricks = _G.BB.Settings.Superball.ShootInsideBricks
 
 	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character:FindFirstChild(AIM_PART).Position);
 
-	if dir:FuzzyEq(Vector3.new()) then
-		return;
+	if dir.x == 0 and dir.y == 0 and dir.z == 0 then
+		return nil, nil, nil
 	end
 
 	local now = time()
-	local SpawnPosition = Character.Head.Position + dir * SpawnDistance
+	local SpawnPosition = Character.Head.Position + dir * 5
 	local LaunchCF = CFrame.new(SpawnPosition, SpawnPosition + dir)
 	local Velocity = LaunchCF.LookVector * Speed
 
@@ -353,26 +353,21 @@ function Superball:Shoot()
 
 		local count = _G.BB.ProjectileCounts.Superballs
 		local CollisionGroup = "Superballs" 
-		local SpawnDistance = _G.BB.Settings.Superball.SpawnDistance
 
 		if canSBJump(Character) then
 			CollisionGroup = "JumpySuperballs"
-			SpawnDistance = 5 -- optimal spawn distance for superball jumping
 		end
 
 		local Superball = MakeSuperball(Player, CollisionGroup, count, tool.Handle.Color)
 
-		local position, velocity, now = self:Fire(Superball, SpawnDistance, count)
+		local position, velocity, now = self:Fire(Superball)
+		if position ~= nil and velocity ~= nil and now ~= nil then
+			UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
 
-		if not position or not velocity or not now then
-			return;
+			SafeWait.wait(ReloadTime)
+	
+			tool.Enabled = true
 		end
-
-		UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
-
-		SafeWait.wait(ReloadTime)
-
-		tool.Enabled = true
 	end
 end
 
@@ -512,7 +507,7 @@ local function main()
 				settings.targetPlayer = player;
 			end
 
-			if settings.panicMode or humanoid.Health <= 0 or Player:DistanceFromCharacter(character.Torso.Position) > 40_000/workspace.Gravity or character:FindFirstChildWhichIsA("ForceField", true) then
+			if settings.panicMode or humanoid.Health <= 0 or character:FindFirstChildWhichIsA("ForceField", true) then
 				data.selectorPart.Parent = nil;
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
@@ -534,20 +529,7 @@ local function main()
 
 		gui.Enabled = not settings.panicMode;
 	end)
-
-
-	-- task.spawn(function()
-	-- 	local i = 0;
-	-- 	while task.wait(0.1) do
-	-- 		i = math.max(1, (i+1)%11)
-	-- 		for player, data in next, playerData do
-	-- 			if player.Character and player.Character:FindFirstChildWhichIsA("Humanoid") then
-	-- 				data.moveDirectionData.directions[i] = player.Character.Humanoid.MoveDirection
-	-- 			end
-	-- 		end
-	-- 	end
-	-- end)
-
+	
 
 	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
 		if gpe then return end
