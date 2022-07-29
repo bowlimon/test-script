@@ -10,7 +10,7 @@ local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.C;
 local CHOOSE_TARGET_KEY = Enum.KeyCode.E;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
-local MOVEDIRECTION_MULTIPLIER_INCREMENT = 0.1;
+local MOVEDIRECTION_MULTIPLIER_INCREMENT = 0.3;
 
 
 local function create(class, properties)
@@ -425,7 +425,7 @@ local function getDir(player, pos)
 		else
 			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
-		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
+		dir = Vector3.new(dx/t, dy/t - 1/2*g*t^2, dz/t).Unit;
 	end
 
 	return dir;
