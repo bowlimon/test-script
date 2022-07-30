@@ -56,7 +56,7 @@ local playerData = {}
 
 
 local settings = {
-	aimbot = false,
+	aimbot = true,
 	arc = "low",
 	targetPlayer = nil,
 	panicMode = false,
@@ -268,7 +268,7 @@ end
 local function getDir(player, pos)
 	local dir = Vector3.new(0, 0, 0)
 	local g = -workspace.Gravity;
-	local k = player.Character.Humanoid.MoveDirection*16.2;
+	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local torso = player.Character.Torso;
 
 	-- local averageMoveDirection = Vector3.new(0, 0, 0);
@@ -562,7 +562,7 @@ local function main()
 			local args = {...}
 
 			if not checkcaller() and self == tool.Activation and namecallMethod == "Fire" and settings.aimbot == true and settings.targetPlayer ~= nil then
-				return nil;
+				return;
 			end;
 
 			if not checkcaller() and self == os and namecallMethod == "time" and os.time(args[1]) == os.time(os.date("*t")) then
