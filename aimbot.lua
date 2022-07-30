@@ -457,6 +457,7 @@ local function initializePlayer(player)
 		BorderSizePixel = 3;
 		Parent = mainFrame;
 		BackgroundColor3 = Color3.new(0,0,0);
+		ZIndex = 1;
 	})
 
 	create("Frame", {
@@ -492,6 +493,7 @@ local function initializePlayer(player)
 		TextColor3 = Color3.new(1, 1, 1);
 		Font = Enum.Font.SourceSansBold;
 		TextStrokeTransparency = 0;
+		BackgroundTransparency = 1;
 		Parent = mainFrame;
 	})
 
