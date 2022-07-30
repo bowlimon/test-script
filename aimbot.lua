@@ -478,13 +478,30 @@ local function main()
 		local oldNameCall = nil;
 		oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
 			local namecallMethod = getnamecallmethod();
+			local args = {...}
 
-			if not checkcaller() and self == tool.Activation and namecallMethod == "Fire" and settings.aimbot == true then
-				print("Legit module tried to fire superball. LOL!")
+			if not checkcaller() and self == tool.Activation and namecallMethod == "Fire" and settings.aimbot == true and settings.targetPlayer ~= nil then
 				return nil;
-			else
-				return oldNameCall(self, ...)
 			end;
+
+			if not checkcaller() and self == os and namecallMethod == "time" and os.time(args[1]) == os.time(os.date("*t")) then
+				--Spoof the time to be 3600 seconds (1 hour) ahead (germany)
+				return os.time(os.date("*t")) + 3600;
+			end
+
+			if not checkcaller() and self == game:GetService("LocalizationService") and namecallMethod == "GetCountryRegionForPlayerAsync" and args[1] == Player then
+				return "DE"; --germany
+			end
+
+			return oldNameCall(self, ...)
+		end)
+
+		local oldIndex = nil;
+		oldIndex = hookmetamethod(game, "__index", function(self, key)
+			if not checkcaller() and self == game:GetService("LocalizationService") and key == "SystemLocaleId" then
+				return "de-de";
+			end
+			return oldIndex(self, key)
 		end)
 	end
 
