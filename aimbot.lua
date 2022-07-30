@@ -390,7 +390,7 @@ function Superball:Shoot()
 		if position ~= nil and velocity ~= nil and now ~= nil then
 			UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
 
-			Aesthetics:HandleSBHandle(Player, tool.handle, self.colorEvent)
+			Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent)
 
 			SafeWait.wait(ReloadTime)
 	
@@ -461,11 +461,12 @@ local function initializePlayer(player)
 		Name = "ProgressBar";
 		AnchorPoint = Vector2.new(0, 0.5);
 		Size = UDim2.new(0, 0, 1, 0);
+		Position = UDim2.new(0, 0, 0.5, 0);
 		BackgroundColor3 = Color3.new(0, 1, 0);
 		Parent = healthBarFrame;
 	})
 
-	healthLabel = create("TextLabel", {
+	create("TextLabel", {
 		Name = "HealthLabel";
 		Size = UDim2.new(1, 0, 1, 0);
 		Position = UDim2.new(0.5, 0, 0.5, 0);
