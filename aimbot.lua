@@ -293,7 +293,8 @@ local function getDir(player, pos)
 	for i = 1, 7 do
 		local y_pred = nil;
 		if isSwordLaunching(player) then
-			y_pred = pos.Y + 1;
+			local new_t = math.max(0, t-0.3)
+			y_pred = math.max(playerMinY, pos.Y +  player.Character.Torso.Velocity.y*t + 1/2*g*new_t^2)
 		else
 			y_pred = math.max(playerMinY, pos.Y +  player.Character.Torso.Velocity.y*t + 1/2*g*t^2)
 		end
