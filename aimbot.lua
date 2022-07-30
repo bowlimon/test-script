@@ -1,4 +1,8 @@
 
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
+
 setmetatable(_G, {
     __index = function(self, key)
         return rawget(getrenv()._G, key)
@@ -448,7 +452,7 @@ local function initializePlayer(player)
 		Position = UDim2.new(0, 0, 1, 0);
 		BorderColor3 = Color3.new(1, 1, 1);
 		BorderSizePixel = 3;
-		parent = mainFrame;
+		Parent = mainFrame;
 	})
 
 	create("Frame", {
