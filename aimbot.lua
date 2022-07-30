@@ -249,6 +249,16 @@ local function canSBJump(Character)
 end
 
 
+local function isSwordLaunching(player)
+	local sword = player:WaitForChild("Backpack"):FindFirstChild("1 Sword") or player.Character and player.Character:FindFirstChild("1 Sword")
+	if not sword then return false end
+	if sword.Grip == CFrame.new(0, 0, -1.5, 0, -1, -0, -1, 0, -0, 0, 0, -1) then
+		return true
+	end
+	return false;
+end
+
+
 local function getDir(player, pos)
 	local dir = Vector3.new(0, 0, 0)
 	local g = -workspace.Gravity;
@@ -280,8 +290,14 @@ local function getDir(player, pos)
 	local t = 0;
 	local sign = settings.arc == "high" and 1 or -1;
 
-	for i = 1, 3 do
-		local y_pred = math.max(playerMinY, pos.Y + (math.max(0, player.Character.Torso.Velocity.y)*t + 1/2*g*t^2))
+	for i = 1, 7 do
+		local y_pred = nil;
+		if isSwordLaunching(player) then
+			y_pred = pos.Y + 1;
+		else
+			y_pred = math.max(playerMinY, pos.Y +  player.Character.Torso.Velocity.y*t + 1/2*g*t^2)
+		end
+
 		local d = (k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character:GetPrimaryPartCFrame().Position + 5*dir)
 
 		local dx, dy, dz = d.x, d.y, d.z;
