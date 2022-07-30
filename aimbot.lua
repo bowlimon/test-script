@@ -9,6 +9,8 @@ setmetatable(_G, {
     end
 })
 
+repeat task.wait() until _G.BB ~= nil;
+
 
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.C;
