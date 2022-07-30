@@ -310,7 +310,7 @@ local function getDir(player, pos)
 		local discriminant = b^2 - 4*a*c;
 
 		if discriminant < 0 then
-			return Random.new():NextUnitVector();
+			return Vector3.new();
 		else
 			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
@@ -328,9 +328,11 @@ function Superball:Fire(Superball)
 
 	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character:FindFirstChild(AIM_PART).Position);
 
-	if dir.x == 0 and dir.y == 0 and dir.z == 0 then
-		return nil, nil, nil
+
+	if dir:FuzzyEq(Vector3.new()) then
+		dir = (Player:GetMouse().Hit.Position - Character.Head.Position).Unit
 	end
+
 
 	local now = time()
 	local SpawnPosition = Character.Head.Position + dir * 5
@@ -370,7 +372,7 @@ function Superball:Shoot()
 		_G.BB.ProjectileCounts.Superballs += 1
 
 		local count = _G.BB.ProjectileCounts.Superballs
-		local CollisionGroup = "Superballs" 
+		local CollisionGroup = "Superballs"
 
 		if canSBJump(Character) then
 			CollisionGroup = "JumpySuperballs"
@@ -381,6 +383,8 @@ function Superball:Shoot()
 		local position, velocity, now = self:Fire(Superball)
 		if position ~= nil and velocity ~= nil and now ~= nil then
 			UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
+
+			Aesthetics:HandleSBHandle(Player, self.handle, self.colorEvent)
 
 			SafeWait.wait(ReloadTime)
 	
@@ -396,12 +400,11 @@ function Superball:Init()
 	self.isInsideSomething = require(_G.BB.ClientObjects:WaitForChild("isInsideSomething"))
 
 	self.ClientActiveFolder = workspace:WaitForChild("Projectiles"):WaitForChild("Active"):WaitForChild(Player.Name)
+	self.colorEvent = tool:WaitForChild("Color")
 
 	local HandleCrosshair = require(_G.BB.ClientObjects:WaitForChild("HandleCrosshair"))
-	local Activation = tool:WaitForChild("Activation")
-	local colorEvent = tool:WaitForChild("Color")
 
-	Aesthetics:HandleSBHandle(Player, tool.Handle, colorEvent, true)
+	Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent, true)
 	HandleCrosshair(tool)
 
 	tool.Enabled = true
@@ -420,6 +423,68 @@ local function initializePlayer(player)
 		CanCollide = false,
 		Anchored = true
 	})
+
+	local billboard = create("BillboardGui", {
+		Name = "InfoGui";
+		Size = UDim2.new(0, 200, 0, 100);
+		ClipsDescendants = false;
+		StudsOffset = Vector3.new(0, 60, 0);
+		AlwaysOnTop = true;
+		LightInfluence = 0;
+		ResetOnSpawn = false;
+	})
+
+	local mainFrame = create("Frame", {
+		Name = "Frame";
+		Size = UDim2.new(1, 0, 1, 0);
+		BackgroundTransparency = 1;
+		Parent = billboard;
+	})
+
+	local healthBarFrame = create("Frame", {
+		Name = "HealthBar";
+		Size = UDim2.new(1, 0, 0.35, 0);
+		AnchorPoint = Vector2.new(0, 1);
+		Position = UDim2.new(0, 0, 1, 0);
+		BorderColor3 = Color3.new(1, 1, 1);
+		BorderSizePixel = 3;
+		parent = mainFrame;
+	})
+
+	create("Frame", {
+		Name = "ProgressBar";
+		AnchorPoint = Vector2.new(0, 0.5);
+		Size = UDim2.new(0, 0, 1, 0);
+		BackgroundColor3 = Color3.new(0, 1, 0);
+		Parent = healthBarFrame;
+	})
+
+	healthLabel = create("TextLabel", {
+		Name = "HealthLabel";
+		Size = UDim2.new(1, 0, 1, 0);
+		Position = UDim2.new(0.5, 0, 0.5, 0);
+		AnchorPoint = Vector2.new(0.5, 0.5);
+		Font = Enum.Font.SourceSansBold;
+		TextStrokeTransparency = 0;
+		TextScaled = true;
+		FontColor3 = Color3.new(1, 1, 1);
+		Parent = healthBarFrame;
+	})
+
+	create("TextLabel", {
+		Name = "Username";
+		Text = ("%s\n(@%s)"):format(player.DisplayName, player.Name);
+		Size = UDim2.new(1, 0, 0.6, 0);
+		Position = UDim2.new(0, 0, 0, 0);
+		TextScaled = true;
+		FontColor3 = Color3.new(1, 1, 1);
+		Font = Enum.Font.SourceSansBold;
+		TextStrokeTransparency = 0;
+		Parent = mainFrame;
+	})
+
+	billboard.Adornee = data.selectorPart;
+	billboard.Parent = data.selectorPart;
 
 	data.moveDirectionData = {
 		averageMoveDirection = nil,
@@ -555,6 +620,10 @@ local function main()
 				end
 				data.selectorPart.Parent = workspace;
 			end
+
+			local gui = data.selectorPart.InfoGui;
+			gui.Frame.HealthBar.ProgressBar.Size = humanoid.Health / humanoid.MaxHealth;
+			gui.Frame.HealthBar.HealthLabel.Text = ("%d/%d"):format(math.round(humanoid.Health), math.round(humanoid.MaxHealth));
 		end
 
 		label.Text =
@@ -587,7 +656,7 @@ local function main()
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
 
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
 			Superball:Shoot();
 		end
 	end)
