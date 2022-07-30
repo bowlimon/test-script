@@ -390,7 +390,7 @@ function Superball:Shoot()
 		if position ~= nil and velocity ~= nil and now ~= nil then
 			UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
 
-			Aesthetics:HandleSBHandle(Player, self.handle, self.colorEvent)
+			Aesthetics:HandleSBHandle(Player, tool.handle, self.colorEvent)
 
 			SafeWait.wait(ReloadTime)
 	
