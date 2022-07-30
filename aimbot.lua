@@ -628,7 +628,7 @@ local function main()
 			end
 
 			local gui = data.selectorPart.InfoGui;
-			gui.Frame.HealthBar.ProgressBar.Size = humanoid.Health / humanoid.MaxHealth;
+			gui.Frame.HealthBar.ProgressBar.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0);
 			gui.Frame.HealthBar.HealthLabel.Text = ("%d/%d"):format(math.round(humanoid.Health), math.round(humanoid.MaxHealth));
 		end
 
