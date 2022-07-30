@@ -473,7 +473,7 @@ local function initializePlayer(player)
 		Font = Enum.Font.SourceSansBold;
 		TextStrokeTransparency = 0;
 		TextScaled = true;
-		FontColor3 = Color3.new(1, 1, 1);
+		TextColor3 = Color3.new(1, 1, 1);
 		Parent = healthBarFrame;
 	})
 
@@ -483,7 +483,7 @@ local function initializePlayer(player)
 		Size = UDim2.new(1, 0, 0.6, 0);
 		Position = UDim2.new(0, 0, 0, 0);
 		TextScaled = true;
-		FontColor3 = Color3.new(1, 1, 1);
+		TextColor3 = Color3.new(1, 1, 1);
 		Font = Enum.Font.SourceSansBold;
 		TextStrokeTransparency = 0;
 		Parent = mainFrame;
