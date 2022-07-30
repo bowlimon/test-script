@@ -445,6 +445,7 @@ local function initializePlayer(player)
 		Size = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
 		Parent = billboard;
+		BackgroundColor3 = Color3.new(1, 1, 1);
 	})
 
 	local healthBarFrame = create("Frame", {
@@ -455,6 +456,7 @@ local function initializePlayer(player)
 		BorderColor3 = Color3.new(1, 1, 1);
 		BorderSizePixel = 3;
 		Parent = mainFrame;
+		BackgroundColor3 = Color3.new(0,0,0);
 	})
 
 	create("Frame", {
@@ -464,6 +466,7 @@ local function initializePlayer(player)
 		Position = UDim2.new(0, 0, 0.5, 0);
 		BackgroundColor3 = Color3.new(0, 1, 0);
 		Parent = healthBarFrame;
+		ZIndex = 2;
 	})
 
 	create("TextLabel", {
@@ -476,6 +479,8 @@ local function initializePlayer(player)
 		TextScaled = true;
 		TextColor3 = Color3.new(1, 1, 1);
 		Parent = healthBarFrame;
+		ZIndex = 3;
+		BackgroundTransparency = 1;
 	})
 
 	create("TextLabel", {
