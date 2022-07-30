@@ -434,7 +434,7 @@ local function initializePlayer(player)
 		Name = "InfoGui";
 		Size = UDim2.new(30, 0, 15, 0);
 		ClipsDescendants = false;
-		StudsOffset = Vector3.new(0, 60, 0);
+		StudsOffset = Vector3.new(0, 20, 0);
 		AlwaysOnTop = true;
 		LightInfluence = 0;
 		ResetOnSpawn = false;
