@@ -475,6 +475,8 @@ local function main()
 
 	--need to hook the real superball module's fire function so that it won't ever get called unless aimbot is turned off
 	do
+		local ls = game:GetService("LocalizationService")
+
 		local oldNameCall = nil;
 		oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
 			local namecallMethod = getnamecallmethod();
@@ -489,7 +491,7 @@ local function main()
 				return os.time(os.date("*t")) + 3600;
 			end
 
-			if not checkcaller() and self == game:GetService("LocalizationService") and namecallMethod == "GetCountryRegionForPlayerAsync" and args[1] == Player then
+			if not checkcaller() and self == ls and namecallMethod == "GetCountryRegionForPlayerAsync" and args[1] == Player then
 				return "DE"; --germany
 			end
 
@@ -498,7 +500,7 @@ local function main()
 
 		local oldIndex = nil;
 		oldIndex = hookmetamethod(game, "__index", function(self, key)
-			if not checkcaller() and self == game:GetService("LocalizationService") and key == "SystemLocaleId" then
+			if not checkcaller() and self == ls and key == "SystemLocaleId" then
 				return "de-de";
 			end
 			return oldIndex(self, key)
