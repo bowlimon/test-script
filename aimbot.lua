@@ -432,7 +432,7 @@ local function initializePlayer(player)
 
 	local billboard = create("BillboardGui", {
 		Name = "InfoGui";
-		Size = UDim2.new(0, 200, 0, 100);
+		Size = UDim2.new(30, 0, 15, 0);
 		ClipsDescendants = false;
 		StudsOffset = Vector3.new(0, 60, 0);
 		AlwaysOnTop = true;
