@@ -270,7 +270,7 @@ local function main()
 				return "DE"; --germany
 			end
 
-			if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
+			if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" and typeof(updateEvent) == "Instance" and updateEvent:IsA("RemoteEvent") then
 				local ourArgs = {...}
 				local data = settings.targetPlayer and playerData[settings.targetPlayer];
 				if data then
