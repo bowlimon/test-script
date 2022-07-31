@@ -64,9 +64,9 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 
 
 	for i = 1, 7 do
-		if t > 0.7 then
-			new_k = k / (3*(t/0.7))
-		end
+		-- if t > 0.7 then
+		-- 	new_k = k / (3*(t/0.7))
+		-- end
 		local time_diff = math.max(0, 0.4 + data.lungeTime - tick())
 		local new_t1 = math.max(0, t-time_diff)
 		local y_pred = math.max(playerMinY, pos.Y + player.Character.Torso.Velocity.y*t + 1/2*g*new_t1^2)
