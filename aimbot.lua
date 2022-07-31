@@ -266,15 +266,15 @@ local function main()
 				return "DE"; --germany
 			end
 
-			if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
-				local data = settings.targetPlayer and playerData[settings.targetPlayer];
-				if data then
-					local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
-					local spawnPos = Player.Character.Head.Position + dir * 5;
-					args[1] = spawnPos;
-					args[2] = dir;
-				end
-			end
+			-- if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
+			-- 	local data = settings.targetPlayer and playerData[settings.targetPlayer];
+			-- 	if data then
+			-- 		local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+			-- 		local spawnPos = Player.Character.Head.Position + dir * 5;
+			-- 		args[1] = spawnPos;
+			-- 		args[2] = dir;
+			-- 	end
+			-- end
 
 
 			return oldNameCall(self, unpack(args))
@@ -284,6 +284,17 @@ local function main()
 		oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
 			if not checkcaller() and self == ls and key == "SystemLocaleId" then
 				return "de-de";
+			end
+
+			if not checkcaller() and typeof(self) == "Vector3" and key:lower() == "unit" then
+				if self:FuzzyEq((Player:GetMouse().Hit.Position - Player.Character.Head.Position).Unit) then
+					local data = settings.targetPlayer and playerData[settings.targetPlayer];
+					if data then
+						print("Return fake direction")
+						local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+						return dir;
+					end
+				end
 			end
 
 			return oldIndex(self, key)
