@@ -277,11 +277,10 @@ local function main()
 				local spawnPos = Player.Character.Head.Position + dir * 5;
 				args[1] = spawnPos;
 				args[2] = dir;
-				return oldNameCall(self, unpack(args))
 			end
 
 
-			return oldNameCall(self, ...)
+			return oldNameCall(self, unpack(args))
 		end)
 
 		local oldIndex = nil;
