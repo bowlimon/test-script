@@ -179,7 +179,7 @@ function Superball:Shoot()
 	
 		self.Delete(Superball, 8) -- exists for 8 seconds		
 	
-		self.Hit:HandleHitDetection(Superball)
+		-- self.Hit:HandleHitDetection(Superball)
 		UpdateEvent:FireServer(LaunchCF.Position, Velocity, now, Superball.Color, count)
 		Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent)
 
@@ -468,12 +468,14 @@ local function main()
 		
 		for player, data in next, playerData do
 			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
-			if not aimPart then continue end;
+			local character = player.Character;
+			local humanoid = character and character:FindFirstChild("Humanoid");
+			if not aimPart or not humanoid then continue end;
 
 			local oldPos = data.oldPos;
 			local newPos = aimPart.Position;
 			local moveDirection = (newPos-oldPos)
-			moveDirection = aimPart.Parent.Humanoid.MoveDirection;
+			moveDirection = humanoid.MoveDirection;
 
 			data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
 
