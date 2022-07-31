@@ -403,7 +403,7 @@ local function main()
 		playerData[player] = nil;
 	end)
 
-	local dt = 0.2;
+
 	RunService.RenderStepped:Connect(function()
 		local mouseTarget = Player:GetMouse().Target;
 
@@ -456,10 +456,14 @@ local function main()
 		gui.Enabled = not settings.panicMode;
 
 
+		local oldPositions = {};
+		local dt = 0.2;
+
+		
 		for player, data in next, playerData do
 			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
 			if not aimPart then continue end;
-			data.oldPos = aimPart.Position
+			oldPositions[player] = aimPart.Position
 		end
 
 
@@ -472,12 +476,12 @@ local function main()
 			local humanoid = character and character:FindFirstChild("Humanoid");
 			if not aimPart or not humanoid then continue end;
 
-			local oldPos = data.oldPos;
+			local oldPos = oldPositions[player];
 			local newPos = aimPart.Position;
 			local moveDirection = (newPos-oldPos)
 			moveDirection = humanoid.MoveDirection;
 
-			data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
+			data.walkSpeed = moveDirection.Magnitude/dt --math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
 
 			if moveDirection.Magnitude > 0.05 then
 				moveDirection = moveDirection.Unit;
