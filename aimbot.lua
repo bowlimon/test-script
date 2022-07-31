@@ -287,6 +287,7 @@ local function main()
 			end
 
 			if not checkcaller() and typeof(self) == "Vector3" and key:lower() == "unit" then
+				print("Unit called", getcallingscript())
 				if self:FuzzyEq((Player:GetMouse().Hit.Position - Player.Character.Head.Position).Unit) then
 					local data = settings.targetPlayer and playerData[settings.targetPlayer];
 					if data then
