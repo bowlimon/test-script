@@ -614,9 +614,8 @@ local function main()
 	end)
 	
 	task.spawn(function()
+		local dt = 0.2;
 		while true do
-			local dt = 0.2;
-
 			for player, data in next, playerData do
 				local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
 				if not aimPart then continue end;
@@ -636,7 +635,7 @@ local function main()
 				local moveDirection = (newPos-oldPos)
 				moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
 
-				data.walkSpeed = moveDirection.Magnitude/dt;
+				data.walkSpeed = math.min(moveDirection.Magnitude/dt, 16.2);
 
 				if moveDirection.Magnitude > 0.05 then
 					moveDirection = moveDirection.Unit;
