@@ -5,7 +5,7 @@ end
 
 
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
-local TOGGLE_ARC_KEY = Enum.KeyCode.C;
+local TOGGLE_ARC_KEY = Enum.KeyCode.T;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
 local MOVEDIRECTION_MULTIPLIER_INCREMENT = 4;
 local AIM_PART = "Head"
@@ -681,8 +681,8 @@ local function main()
 				settings.aimbot = false;
 				settings.targetPlayer = nil;
 			end
-		elseif key == Enum.KeyCode.Z or key == Enum.KeyCode.X then
-			local sign = key == Enum.KeyCode.X and 1 or -1;
+		elseif key == Enum.KeyCode.C or key == Enum.KeyCode.V then
+			local sign = key == Enum.KeyCode.V and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
 
