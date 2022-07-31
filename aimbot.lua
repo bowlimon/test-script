@@ -271,12 +271,10 @@ local function main()
 				if data then
 					local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
 					local spawnPos = Player.Character.Head.Position + dir * 5;
-					args[1] = spawnPos;
-					args[2] = dir;
+					-- args[1] = spawnPos;
+					-- args[2] = dir;
 				end
 			end
-
-			print(self)
 
 
 			return oldNameCall(self, unpack(args))
