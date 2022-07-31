@@ -257,7 +257,7 @@ local function main()
 		local ls = game:GetService("LocalizationService")
 
 		local oldNameCall = nil;
-		oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
+		oldNameCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
 			local namecallMethod = getnamecallmethod();
 			local args = {...}
 
@@ -284,16 +284,16 @@ local function main()
 
 
 			return oldNameCall(self, unpack(args))
-		end)
+		end))
 
 		local oldIndex = nil;
-		oldIndex = hookmetamethod(game, "__index", function(self, key)
+		oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
 			if not checkcaller() and self == ls and key == "SystemLocaleId" then
 				return "de-de";
 			end
 
 			return oldIndex(self, key)
-		end)
+		end))
 	end
 
 
