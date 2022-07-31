@@ -265,11 +265,11 @@ local function isSwordLaunching(player)
 end
 
 
-local function getDir(player, pos)
+local function getDir(player, pos, moveDirection, walkSpeed)
 	local dir = Vector3.new(0, 0, 0)
 	local g = -workspace.Gravity;
-	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
-	local torso = player.Character.Torso;
+	local k = moveDirection*walkSpeed;
+	local data  = playerData[player];
 
 	-- local averageMoveDirection = Vector3.new(0, 0, 0);
 	-- local averageHeadHeight = 0;
@@ -294,18 +294,16 @@ local function getDir(player, pos)
 	end
 	
 	local t = 0;
-	local sign = settings.arc == "high" and 1 or -1;
-
+	local new_k = k;
 	for i = 1, 7 do
-		local y_pred = nil;
-		if isSwordLaunching(player) then
-			local new_t = math.max(0, t-0.3)
-			y_pred = math.max(playerMinY, pos.Y +  player.Character.Torso.Velocity.y*t + 1/2*g*new_t^2)
-		else
-			y_pred = math.max(playerMinY, pos.Y +  player.Character.Torso.Velocity.y*t + 1/2*g*t^2)
+		if t > 0.7 then
+			new_k = k / (3*(t/0.7))
 		end
-
-		local d = (k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character:GetPrimaryPartCFrame().Position + 5*dir)
+		local time_diff = math.max(0, 0.4 + data.lungeTime - tick())
+		local new_t1 = math.max(0, t-time_diff)
+		local y_pred = math.max(playerMinY, pos.Y + player.Character.Torso.Velocity.y*t + 1/2*g*new_t1^2)
+		
+		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character:GetPrimaryPartCFrame().Position + 5*dir)
 
 		local dx, dy, dz = d.x, d.y, d.z;
 
@@ -318,21 +316,24 @@ local function getDir(player, pos)
 		if discriminant < 0 then
 			return Vector3.new();
 		else
-			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
+			t = math.sqrt((-b + math.sqrt(discriminant)) / (2*a));
 		end
 		
 		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
 	end
 
-	return dir;
+	return dir, t;
 end
 
 
 function Superball:Fire(Superball)
 	local Speed = _G.BB.Settings.Superball.Speed
 	local ShootInsideBricks = _G.BB.Settings.Superball.ShootInsideBricks
+	local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
+	local data = playerData[settings.targetPlayer];
 
-	local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character:FindFirstChild(AIM_PART).Position);
+
+	local dir = getDir(settings.targetPlayer, aimPart.Position, data.moveDirection, data.walkSpeed);
 
 
 	if dir:FuzzyEq(Vector3.new()) then
@@ -500,10 +501,12 @@ local function initializePlayer(player)
 	billboard.Adornee = data.selectorPart;
 	billboard.Parent = data.selectorPart;
 
-	data.moveDirectionData = {
-		averageMoveDirection = nil,
-		directions = {};
-	}
+	data.lungeTime = 0;
+	data.isLungingBefore = false;
+
+	data.oldPos = Vector3.new();
+	data.walkSpeed = 16.2;
+	data.moveDirection = Vector3.new();
 
 	CollectionService:AddTag(data.selectorPart, "SelectorPart")
 
@@ -605,6 +608,40 @@ local function main()
 		table.clear(data);
 		playerData[player] = nil;
 	end)
+	
+	task.spawn(function()
+		while true do
+			local dt = 0.2;
+
+			for player, data in next, playerData do
+				local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
+				data.oldPos = aimPart.Position
+			end
+	
+	
+			task.wait(dt);
+	
+			
+			for player, data in next, playerData do
+				local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
+	
+				local oldPos = data.oldPos;
+				local newPos = aimPart.Position;
+				local moveDirection = (newPos-oldPos)
+				moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
+
+				data.walkSpeed = moveDirection.Magnitude/dt;
+
+				if moveDirection.Magnitude > 0.05 then
+					moveDirection = moveDirection.Unit;
+				else
+					moveDirection = Vector3.new();
+				end
+
+				data.moveDirection = moveDirection;
+			end
+		end
+	end)
 
 	RunService.RenderStepped:Connect(function()
 		local mouseTarget = Player:GetMouse().Target;
@@ -618,6 +655,14 @@ local function main()
 			local head = character and character:FindFirstChild("Head")
 			local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
 			if not head or not humanoid then continue end
+
+
+			if data.isLungingBefore == false and isSwordLaunching(player) == true then
+				data.isLungingBefore = true
+				data.lungeTime = tick() - 0.1;
+			end
+			data.isLungingBefore = isSwordLaunching(player)
+
 
 			if mouseTarget == data.selectorPart then
 				settings.targetPlayer = player;
