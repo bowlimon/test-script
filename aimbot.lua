@@ -334,6 +334,8 @@ function Superball:Fire(Superball)
 	local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
 	local data = playerData[settings.targetPlayer];
 
+	print(data.moveDirection);
+	print(data.walkSpeed);
 
 	local dir = getDir(settings.targetPlayer, aimPart.Position, data.moveDirection, data.walkSpeed);
 
