@@ -3,10 +3,6 @@ if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 
-local global = getrenv()._G
-
-repeat task.wait() until global.BB ~= nil;
-
 
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.C;
@@ -286,15 +282,15 @@ local function main()
 	-- 		return oldNameCall(self, unpack(args))
 	-- 	end))
 
-		local oldIndex = nil;
-		oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
-			if not checkcaller() and self == ls and key == "SystemLocaleId" then
-				return "de-de";
-			end
+	-- 	local oldIndex = nil;
+	-- 	oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
+	-- 		if not checkcaller() and self == ls and key == "SystemLocaleId" then
+	-- 			return "de-de";
+	-- 		end
 
-			return oldIndex(self, key)
-		end))
-	end
+	-- 		return oldIndex(self, key)
+	-- 	end))
+	-- end
 
 
 	Players.PlayerAdded:Connect(initializePlayer)
