@@ -30,7 +30,6 @@ local CollectionService = game:GetService("CollectionService")
 local Player = Players.LocalPlayer
 local Character = nil; --will be initialized later
 local tool = nil --will be inited later
-local updateEvent = nil;
 
 
 local playerData = {}
@@ -472,12 +471,12 @@ end
 local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
-	updateEvent = tool:WaitForChild("Update")
 
 	if TOOL_TYPE == "TOB" then
 		local activationEvent = tool:WaitForChild("Activation")
 		local oldFire = nil;
 		oldFire = hookfunction(activationEvent.Fire, newcclosure(function(...)
+			print("fire() called")
 			if not checkcaller() and settings.aimbot == true and settings.targetPlayer ~= nil then
 				TOB_Fire(settings.targetPlayer);
 				return nil;
