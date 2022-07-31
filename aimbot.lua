@@ -537,7 +537,11 @@ local function main()
 				return "DE"; --germany
 			end
 
-			return oldNameCall(self, unpack(args))
+			if not checkcaller() and self == tool.Activation and namecallMethod == "Fire" and settings.aimbot == true and settings.targetPlayer ~= nil then
+				return;
+			end;
+
+			return oldNameCall(self, ...)
 		end))
 
 		local oldIndex = nil;
@@ -680,6 +684,12 @@ local function main()
 		elseif key == Enum.KeyCode.E or key == Enum.KeyCode.Q then
 			local sign = key == Enum.KeyCode.E and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
+		end
+
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
+			if TOOL_TYPE == "TOB" then
+				TOB_Fire(settings.targetPlayer);
+			end
 		end
 	end)
 end
