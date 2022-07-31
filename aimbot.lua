@@ -268,7 +268,7 @@ end
 local function getDir(player, pos, moveDirection, walkSpeed)
 	local dir = Vector3.new(0, 0, 0)
 	local g = -workspace.Gravity;
-	local k = moveDirection*walkSpeed;
+	local k = player.Character.Humanoid.MoveDirection*walkSpeed;
 	local data  = playerData[player];
 
 	-- local averageMoveDirection = Vector3.new(0, 0, 0);
@@ -643,7 +643,7 @@ local function main()
 				-- 	moveDirection = Vector3.new();
 				-- end
 
-				data.moveDirection = moveDirection;
+				-- data.moveDirection = moveDirection;
 			end
 		end
 	end)
