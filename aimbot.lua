@@ -618,7 +618,8 @@ local function main()
 			local dt = 0.2;
 
 			for player, data in next, playerData do
-				local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
+				local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
+				if not aimPart then continue end;
 				data.oldPos = aimPart.Position
 			end
 	
@@ -627,7 +628,8 @@ local function main()
 	
 			
 			for player, data in next, playerData do
-				local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
+				local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
+				if not aimPart then continue end;
 	
 				local oldPos = data.oldPos;
 				local newPos = aimPart.Position;
