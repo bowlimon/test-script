@@ -1,6 +1,4 @@
 
-print("NEW SCRIPT")
-
 if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
@@ -268,18 +266,18 @@ local function main()
 				return "DE"; --germany
 			end
 
-			-- if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
-			-- 	-- local data = settings.targetPlayer and playerData[settings.targetPlayer];
-			-- 	-- if data then
-			-- 	-- 	local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
-			-- 	-- 	local spawnPos = Player.Character.Head.Position + dir * 5;
-			-- 	-- 	-- args[1] = spawnPos;
-			-- 	-- 	-- args[2] = dir;
-			-- 	-- end
-			-- end
+			if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
+				local data = settings.targetPlayer and playerData[settings.targetPlayer];
+				if data then
+					local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+					local spawnPos = Player.Character.Head.Position + dir * 5;
+					args[1] = spawnPos;
+					args[2] = dir;
+				end
+			end
 
 
-			return oldNameCall(self, unpack(args))
+			return oldNameCall(self, ...)
 		end))
 
 		local oldIndex = nil;
