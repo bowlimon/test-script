@@ -273,10 +273,12 @@ local function main()
 			if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
 				print(self, unpack(args))
 				local data = settings.targetPlayer and playerData[settings.targetPlayer];
-				local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
-				local spawnPos = Player.Character.Head.Position + dir * 5;
-				args[1] = spawnPos;
-				args[2] = dir;
+				if data then
+					local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+					local spawnPos = Player.Character.Head.Position + dir * 5;
+					args[1] = spawnPos;
+					args[2] = dir;
+				end
 			end
 
 
