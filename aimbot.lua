@@ -284,16 +284,20 @@ local function main()
 		end)
 
 		local oldFire = nil;
-		oldFire = hookfunction(Instance.new("RemoteEvent").FireServer, newcclosure(function(event, ...)
+		oldFire = hookfunction(tool:WaitForChild("Update").FireServer, newcclosure(function(event, ...)
 			local args = {...}
-			print(event, unpack(args))
-			if event.Name == "Update" and event.Parent == tool then
-				local data = settings.targetPlayer and playerData[settings.targetPlayer];
-				local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
-				local spawnPos = Player.Character.Head.Position + dir * 5;
-				args[1] = spawnPos;
-				args[2] = dir;
+
+			if not checkcaller() then
+				print(event, unpack(args))
+				if event.Name == "Update" and event.Parent == tool then
+					local data = settings.targetPlayer and playerData[settings.targetPlayer];
+					local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+					local spawnPos = Player.Character.Head.Position + dir * 5;
+					args[1] = spawnPos;
+					args[2] = dir;
+				end
 			end
+
 			return oldFire(event, unpack(args))
 		end))
 	end
