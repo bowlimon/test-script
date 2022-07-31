@@ -33,15 +33,7 @@ local CollectionService = game:GetService("CollectionService")
 local Player = Players.LocalPlayer
 local Character = nil; --will be initialized later
 local tool = nil --will be inited later
-local toolModule = nil --will be inited later too
-
-
-local Aesthetics = require(global.BB.Modules:WaitForChild("Aesthetics"))
-local SafeWait = require(global.BB.Modules.Security:WaitForChild("SafeWait"))
-local MakeSuperball = require(global.BB.ClientObjects:WaitForChild("MakeSuperball"))
-
-local ReloadTime = global.BB.Settings.Superball.ReloadTime
-local UpdateEvent = nil; --will be inited later
+local toolModule = nil;
 
 
 local playerData = {}
@@ -56,17 +48,17 @@ local settings = {
 }
 
 
-local Superball = {}
-
-
-local function canSBJump(Character)
-	return (global.BB.Settings.SuperballJump 
-		and Character.Humanoid.FloorMaterial == Enum.Material.Air)
-end
-
-
 local function isSwordLaunching(player)
-	local sword = player:WaitForChild("Backpack"):FindFirstChild("1 Sword") or player.Character and player.Character:FindFirstChild("1 Sword")
+	local function findSword(parent)
+		for _, child in next, parent:GetChildren() do
+			if child:IsA("Tool") and string.find(child.Name:lower(), "sword") then
+				return child
+			end
+		end
+		return nil
+	end
+
+	local sword = findSword(player:WaitForChild("Backpack")) or player.Character and findSword(player.Character)
 	if not sword then return false end
 	if sword.Grip == CFrame.new(0, 0, -1.5, 0, -1, -0, -1, 0, -0, 0, 0, -1) then
 		return true
@@ -84,7 +76,7 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 	
 	local playerMinY = nil; do
 		local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
-		local hit, pos = workspace:FindPartOnRay(r, player.Character, true, false)
+		local _, pos = workspace:FindPartOnRay(r, player.Character, true, false)
 		playerMinY = (pos.Y or -9999999) + 2 + 2 + 1/2;
 	end
 
@@ -121,89 +113,7 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
 	end
 
-	return dir, t;
-end
-
-function Superball:Shoot()
-	if tool.Enabled then
-		tool.Enabled = false
-
-		global.BB.ProjectileCounts.Superballs += 1
-
-		local count = global.BB.ProjectileCounts.Superballs
-		local CollisionGroup = "Superballs"
-
-		if canSBJump(Character) then
-			CollisionGroup = "JumpySuperballs"
-		end
-
-		local Superball = MakeSuperball(Player, CollisionGroup, count, tool.Handle.Color)
-
-
-		local Speed = global.BB.Settings.Superball.Speed
-		local ShootInsideBricks = global.BB.Settings.Superball.ShootInsideBricks
-		local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
-		local data = playerData[settings.targetPlayer];
-	
-		local dir = getDir(settings.targetPlayer, aimPart.Position, data.moveDirection, data.walkSpeed);
-	
-	
-		if dir:FuzzyEq(Vector3.new()) then
-			dir = (Player:GetMouse().Hit.Position - Character.Head.Position).Unit
-		end
-	
-	
-		local now = time()
-		local SpawnPosition = Character.Head.Position + dir * 5
-		local LaunchCF = CFrame.new(SpawnPosition, SpawnPosition + dir)
-		local Velocity = LaunchCF.LookVector * Speed
-	
-		Superball.LastSentPosition.Value = LaunchCF.Position
-		Superball.LastSentVelocity.Value = Velocity
-		Superball.LastSentTime.Value = now
-	
-		Superball.CFrame = LaunchCF
-		Superball.Velocity = Velocity
-		Superball.Parent = self.ClientActiveFolder
-	
-		if not ShootInsideBricks and self.isInsideSomething(Superball) then
-			Superball.Anchored = true
-			local Position = tool.Handle.Position
-			local cFrame = CFrame.lookAt(Position, Position + dir)
-			Superball.CFrame = cFrame
-			Superball.Velocity = Superball.CFrame.LookVector * Speed
-			Superball.Anchored = false
-		end
-	
-		tool.Handle.Boing:Play() -- or handle.Boing:Play()
-	
-		self.Delete(Superball, 8) -- exists for 8 seconds		
-	
-		-- self.Hit:HandleHitDetection(Superball)
-		UpdateEvent:FireServer(LaunchCF.Position, Velocity, now, Superball.Color, count)
-		Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent)
-
-		SafeWait.wait(ReloadTime)
-
-		tool.Enabled = true
-	end
-end
-
-
-function Superball:Init()
-	self.Hit = require(global.BB.Modules:WaitForChild("Hit"))
-	self.Delete = require(global.BB.ClientObjects:WaitForChild("Delete"))
-	self.isInsideSomething = require(global.BB.ClientObjects:WaitForChild("isInsideSomething"))
-
-	self.ClientActiveFolder = workspace:WaitForChild("Projectiles"):WaitForChild("Active"):WaitForChild(Player.Name)
-	self.colorEvent = tool:WaitForChild("Color")
-
-	local HandleCrosshair = require(global.BB.ClientObjects:WaitForChild("HandleCrosshair"))
-
-	Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent, true)
-	HandleCrosshair(tool)
-
-	tool.Enabled = true
+	return dir;
 end
 
 
@@ -293,9 +203,9 @@ local function initializePlayer(player)
 	data.lungeTime = 0;
 	data.isLungingBefore = false;
 
-	data.oldPos = Vector3.new();
 	data.walkSpeed = 16.2;
 	data.moveDirection = Vector3.new();
+	data.newPos = Vector3.new();
 
 	CollectionService:AddTag(data.selectorPart, "SelectorPart")
 
@@ -306,7 +216,7 @@ end
 local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
-	UpdateEvent = tool:WaitForChild("Update");
+	toolModule = require(tool:WaitForChild("Client"):WaitForChild("SuperballClient"))
 
 	local dead = false;
 	Character:WaitForChild("Humanoid").Died:Connect(function()
@@ -321,8 +231,6 @@ end;
 local function main()
 	updateCharVars();
 
-
-	Superball:Init()
 
 	local gui = create("ScreenGui", {
 		Parent = game:GetService("CoreGui"),
@@ -343,7 +251,7 @@ local function main()
 		TextColor3 = Color3.new(0, 0, 0)
 	})
 
-	--need to hook the real superball module's fire function so that it won't ever get called unless aimbot is turned off
+	--Hook game metatables
 	do
 		local ls = game:GetService("LocalizationService")
 
@@ -351,10 +259,6 @@ local function main()
 		oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
 			local namecallMethod = getnamecallmethod();
 			local args = {...}
-
-			if not checkcaller() and self == tool.Activation and namecallMethod == "Fire" and settings.aimbot == true and settings.targetPlayer ~= nil then
-				return;
-			end;
 
 			if not checkcaller() and self == os and namecallMethod == "time" and os.time(args[1]) == os.time(os.date("*t")) then
 				--Spoof the time to be 3600 seconds (1 hour) ahead (germany)
@@ -365,6 +269,21 @@ local function main()
 				return "DE"; --germany
 			end
 
+			if not checkcaller() and self == toolModule and namecallMethod == "Fire" then
+				local env = getsenv(toolModule.Fire);
+				local upvalues = debug.getupvalues(env);
+				for i, upvalue in ipairs(upvalues) do
+					if typeof(upvalue) == "Vector3" and math.abs(upvalue.Magnitude - 200) < 0.01 then
+						local data = playerData[settings.targetPlayer]
+						local dir = data and getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed);
+						if dir then
+							debug.setupvalue(env, i, dir*200);
+							print("Successfully replaced velocity.")
+						end
+					end
+				end
+			end
+
 			return oldNameCall(self, ...)
 		end)
 
@@ -372,11 +291,6 @@ local function main()
 		oldIndex = hookmetamethod(game, "__index", function(self, key)
 			if not checkcaller() and self == ls and key == "SystemLocaleId" then
 				return "de-de";
-			end
-
-			if not checkcaller() and self == _G then
-				print("Attempt to access syn _G, key =", key)
-				return global[key];
 			end
 
 			return oldIndex(self, key)
@@ -459,8 +373,8 @@ local function main()
 		local oldPositions = {};
 		local dt = 0.2;
 
-		
-		for player, data in next, playerData do
+
+		for player, _ in next, playerData do
 			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
 			if not aimPart then continue end;
 			oldPositions[player] = aimPart.Position
@@ -490,6 +404,7 @@ local function main()
 			end
 
 			data.moveDirection = moveDirection;
+			data.newPos = newPos;
 		end
 	end)
 
@@ -511,10 +426,6 @@ local function main()
 		elseif key == Enum.KeyCode.E or key == Enum.KeyCode.Q then
 			local sign = key == Enum.KeyCode.E and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
-		end
-
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
-			Superball:Shoot();
 		end
 	end)
 end
