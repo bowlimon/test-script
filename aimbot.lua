@@ -7,7 +7,7 @@ end
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.C;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
-local MOVEDIRECTION_MULTIPLIER_INCREMENT = 0.3;
+local MOVEDIRECTION_MULTIPLIER_INCREMENT = 4;
 local AIM_PART = "Head"
 local TOOL_TYPE = _G.placeIds[game.PlaceId];
 
@@ -47,7 +47,7 @@ local settings = {
 local function getDir(player, pos, moveDirection, walkSpeed)
 	local dir = Vector3.new(0, 0, 0)
 	local g = -workspace.Gravity;
-	local k = moveDirection*walkSpeed;
+	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local data  = playerData[player];
 
 	
@@ -681,8 +681,8 @@ local function main()
 				settings.aimbot = false;
 				settings.targetPlayer = nil;
 			end
-		elseif key == Enum.KeyCode.E or key == Enum.KeyCode.Q then
-			local sign = key == Enum.KeyCode.E and 1 or -1;
+		elseif key == Enum.KeyCode.Z or key == Enum.KeyCode.X then
+			local sign = key == Enum.KeyCode.X and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
 
