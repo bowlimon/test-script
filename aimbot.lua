@@ -306,7 +306,6 @@ end
 local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
-	toolModule = require(tool:WaitForChild("Client"):WaitForChild("SuperballClient"))
 	UpdateEvent = tool:WaitForChild("Update");
 
 	local dead = false;
@@ -403,42 +402,8 @@ local function main()
 		table.clear(data);
 		playerData[player] = nil;
 	end)
-	
-	task.spawn(function()
-		local dt = 0.2;
-		while true do
-			for player, data in next, playerData do
-				local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
-				if not aimPart then continue end;
-				data.oldPos = aimPart.Position
-			end
-	
-	
-			task.wait(dt);
-	
-			
-			for player, data in next, playerData do
-				local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
-				if not aimPart then continue end;
-	
-				local oldPos = data.oldPos;
-				local newPos = aimPart.Position;
-				local moveDirection = (newPos-oldPos)
-				moveDirection = aimPart.Parent.Humanoid.MoveDirection;
 
-				data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
-
-				if moveDirection.Magnitude > 0.05 then
-					moveDirection = moveDirection.Unit;
-				else
-					moveDirection = Vector3.new();
-				end
-
-				data.moveDirection = moveDirection;
-			end
-		end
-	end)
-
+	local dt = 0.2;
 	RunService.RenderStepped:Connect(function()
 		local mouseTarget = Player:GetMouse().Target;
 
@@ -489,6 +454,37 @@ local function main()
 		("\nMoveDirectionMultiplier = %.2f"):format(settings.moveDirectionMultiplier).." [edit with +/-]"
 
 		gui.Enabled = not settings.panicMode;
+
+
+		for player, data in next, playerData do
+			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
+			if not aimPart then continue end;
+			data.oldPos = aimPart.Position
+		end
+
+
+		task.wait(dt);
+
+		
+		for player, data in next, playerData do
+			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
+			if not aimPart then continue end;
+
+			local oldPos = data.oldPos;
+			local newPos = aimPart.Position;
+			local moveDirection = (newPos-oldPos)
+			moveDirection = aimPart.Parent.Humanoid.MoveDirection;
+
+			data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
+
+			if moveDirection.Magnitude > 0.05 then
+				moveDirection = moveDirection.Unit;
+			else
+				moveDirection = Vector3.new();
+			end
+
+			data.moveDirection = moveDirection;
+		end
 	end)
 
 
