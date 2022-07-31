@@ -286,6 +286,7 @@ local function main()
 		local oldFire = nil;
 		oldFire = hookfunction(Instance.new("RemoteEvent").FireServer, newcclosure(function(event, ...)
 			local args = {...}
+			print(event, unpack(args))
 			if event.Name == "Update" and event.Parent == tool then
 				local data = settings.targetPlayer and playerData[settings.targetPlayer];
 				local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
