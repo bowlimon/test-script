@@ -249,48 +249,48 @@ local function main()
 	})
 
 	--Hook game metatables
-	-- do
-	-- 	local ls = game:GetService("LocalizationService")
+	do
+		local ls = game:GetService("LocalizationService")
 
-	-- 	local oldNameCall = nil;
-	-- 	oldNameCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-	-- 		local namecallMethod = getnamecallmethod();
-	-- 		local args = {...}
+		local oldNameCall = nil;
+		oldNameCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+			local namecallMethod = getnamecallmethod();
+			local args = {...}
 
-	-- 		if not checkcaller() and self == os and namecallMethod == "time" and os.time(args[1]) == os.time(os.date("*t")) then
-	-- 			--Spoof the time to be 3600 seconds (1 hour) ahead (germany)
-	-- 			return os.time(os.date("*t")) + 3600;
-	-- 		end
+			if not checkcaller() and self == os and namecallMethod == "time" and os.time(args[1]) == os.time(os.date("*t")) then
+				--Spoof the time to be 3600 seconds (1 hour) ahead (germany)
+				return os.time(os.date("*t")) + 3600;
+			end
 
-	-- 		if not checkcaller() and self == ls and namecallMethod == "GetCountryRegionForPlayerAsync" and args[1] == Player then
-	-- 			return "DE"; --germany
-	-- 		end
+			if not checkcaller() and self == ls and namecallMethod == "GetCountryRegionForPlayerAsync" and args[1] == Player then
+				return "DE"; --germany
+			end
 
-	-- 		-- if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" and typeof(updateEvent) == "Instance" and updateEvent:IsA("RemoteEvent") then
-	-- 		-- 	local ourArgs = {...}
-	-- 		-- 	local data = settings.targetPlayer and playerData[settings.targetPlayer];
-	-- 		-- 	if data then
-	-- 		-- 		local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
-	-- 		-- 		local spawnPos = Player.Character.Head.Position + dir * 5;
-	-- 		-- 		ourArgs[1] = spawnPos;
-	-- 		-- 		ourArgs[2] = dir;
-	-- 		-- 		return oldNameCall(updateEvent, unpack(ourArgs))
-	-- 		-- 	end
-	-- 		-- end
+			-- if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
+			-- 	local ourArgs = {...}
+			-- 	local data = settings.targetPlayer and playerData[settings.targetPlayer];
+			-- 	if data then
+			-- 		local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+			-- 		local spawnPos = Player.Character.Head.Position + dir * 5;
+			-- 		ourArgs[1] = spawnPos;
+			-- 		ourArgs[2] = dir;
+			-- 		return oldNameCall(updateEvent, unpack(ourArgs))
+			-- 	end
+			-- end
 
 
-	-- 		return oldNameCall(self, unpack(args))
-	-- 	end))
+			return oldNameCall(self, unpack(args))
+		end))
 
-	-- 	local oldIndex = nil;
-	-- 	oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
-	-- 		if not checkcaller() and self == ls and key == "SystemLocaleId" then
-	-- 			return "de-de";
-	-- 		end
+		local oldIndex = nil;
+		oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
+			if not checkcaller() and self == ls and key == "SystemLocaleId" then
+				return "de-de";
+			end
 
-	-- 		return oldIndex(self, key)
-	-- 	end))
-	-- end
+			return oldIndex(self, key)
+		end))
+	end
 
 
 	Players.PlayerAdded:Connect(initializePlayer)
