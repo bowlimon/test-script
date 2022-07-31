@@ -218,29 +218,6 @@ local function updateCharVars()
 	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
 	toolModule = require(tool:WaitForChild("Client"):WaitForChild("SuperballClient"))
 
-	local oldFire = nil;
-	oldFire = hookfunction(toolModule.Fire, function(self, ...)
-		print("Fire was called by the script")
-
-
-		if not checkcaller() then
-			local upvalues = debug.getupvalues(toolModule.Fire);
-			for i, upvalue in ipairs(upvalues) do
-				if typeof(upvalue) == "Vector3" and math.abs(upvalue.Magnitude - 200) < 0.01 then
-					print("Found the direction upvalue")
-					local data = playerData[settings.targetPlayer]
-					local dir = data and getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed);
-					if dir then
-						debug.setupvalue(toolModule.Fire, i, dir*200);
-						print("Successfully replaced velocity.")
-					end
-				end
-			end
-		end
-
-
-		return oldFire(self, ...)
-	end)
 
 	local dead = false;
 	Character:WaitForChild("Humanoid").Died:Connect(function()
@@ -305,6 +282,19 @@ local function main()
 
 			return oldIndex(self, key)
 		end)
+
+		local oldFire = nil;
+		oldFire = hookfunction(Instance.new("RemoteEvent").FireServer, newcclosure(function(event, ...)
+			local args = {...}
+			if event.Name == "Update" and event.Parent == tool then
+				local data = settings.targetPlayer and playerData[settings.targetPlayer];
+				local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
+				local spawnPos = Player.Character.Head.Position + dir * 5;
+				args[1] = spawnPos;
+				args[2] = dir;
+			end
+			return oldFire(event, unpack(args))
+		end))
 	end
 
 
