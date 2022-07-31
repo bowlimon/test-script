@@ -277,7 +277,7 @@ local function main()
 			end
 
 
-			return oldNameCall(self, ...)
+			return oldNameCall(self, unpack(args))
 		end))
 
 		local oldIndex = nil;
