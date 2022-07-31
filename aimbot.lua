@@ -219,7 +219,7 @@ local function updateCharVars()
 	toolModule = require(tool:WaitForChild("Client"):WaitForChild("SuperballClient"))
 
 	local oldFire = nil;
-	oldFire = hookfunction(toolModule.Fire, newcclosure(function(self, ...)
+	oldFire = hookfunction(toolModule.Fire, function(self, ...)
 		print("Fire was called by the script")
 
 
@@ -240,7 +240,7 @@ local function updateCharVars()
 
 
 		return oldFire(self, ...)
-	end))
+	end)
 
 	local dead = false;
 	Character:WaitForChild("Humanoid").Died:Connect(function()
