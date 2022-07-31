@@ -3,13 +3,9 @@ if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 
-setmetatable(_G, {
-    __index = function(self, key)
-        return rawget(getrenv()._G, key)
-    end
-})
+local global = getrenv()._G
 
-repeat task.wait() until _G.BB ~= nil;
+repeat task.wait() until global.BB ~= nil;
 
 
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
@@ -29,29 +25,25 @@ local function create(class, properties)
 	return obj;
 end
 
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 
 local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
 local Character = nil; --will be initialized later
 local tool = nil --will be inited later
 local toolModule = nil --will be inited later too
 
-local Kill = require(_G.BB.Modules:WaitForChild("Kill"))
-local PSPV = require(_G.BB.Modules.Security:WaitForChild("PSPV"))
-local HitRemote = _G.BB.Remotes:WaitForChild("Hit")
-local Settings = _G.BB.Settings
-local Aesthetics = require(_G.BB.Modules:WaitForChild("Aesthetics"))
-local SafeWait = require(_G.BB.Modules.Security:WaitForChild("SafeWait"))
-local MakeSuperball = require(_G.BB.ClientObjects:WaitForChild("MakeSuperball"))
 
-local ReloadTime = _G.BB.Settings.Superball.ReloadTime
+local Aesthetics = require(global.BB.Modules:WaitForChild("Aesthetics"))
+local SafeWait = require(global.BB.Modules.Security:WaitForChild("SafeWait"))
+local MakeSuperball = require(global.BB.ClientObjects:WaitForChild("MakeSuperball"))
+
+local ReloadTime = global.BB.Settings.Superball.ReloadTime
 local UpdateEvent = nil; --will be inited later
 
 
-local FPS = 0
 local playerData = {}
 
 
@@ -64,193 +56,11 @@ local settings = {
 }
 
 
-if RunService:IsClient() then
-	RunService.Stepped:Connect(
-		function(_, dt)
-			FPS = 1 / dt
-		end
-	)
-end
-
-
-local HitModule = {};
-
-
-function IsAcceptableHit(player, hit)
-	return hit.Parent:FindFirstChildWhichIsA("Humanoid") or 
-		not (
-		CollectionService:HasTag(hit,"Projectile") 
-			or (hit.CanCollide == false) 
-			or hit.Name == "Handle"
-	)
-end
-
-
-function HitModule:HandleHitDetection(projectile)
-	--print("__________")
-	--print("Initializing:", PhysicsFolder.UniqueID.Value)
-	local Delete = require(_G.BB.ClientObjects:WaitForChild("Delete"))
-	
-	if projectile:FindFirstChildWhichIsA("TouchTransmitter") then 
-		return 
-	end
-	
-	projectile.Ready.Value = true
-	
-	local player = Players.LocalPlayer
-	local ProjectileType = projectile.ProjectileType.Value
-	local setting = Settings[ProjectileType]
-	local damage = projectile.Damage.Value
-	
-	local CanHalfDamage = setting.RicochetDamage
-	local hitHumanoid = false
-	local SetGlobal = false
-	
-	--local p0, v0, t0 = PhysicsFolder.LastSentPosition, PhysicsFolder.LastSentVelocity, PhysicsFolder.LastSentTime
-	
-	local TouchedConnection
-	
-	TouchedConnection = projectile.Touched:Connect(function(hit)
-		
-		local humanoid = hit.Parent:FindFirstChildWhichIsA("Humanoid")
-		local Player = Players:GetPlayerFromCharacter(hit.Parent)
-
-		local p1 = projectile.Position
-		local v1 = projectile.Velocity
-		local t1 = time()
-
-		local CharacterData
-		local FireToServer = false
-
-		-- Play boing sound
-		if projectile:FindFirstChild("Boing") then
-			if not projectile.Boing.IsPlaying and (damage > 12) then
-				projectile.Boing:Play()
-			end
-		end
-		
-		-- Evaluate SB fly status
-		if ProjectileType == "Superball" and (Player and Player == Players.LocalPlayer) and not SetGlobal then
-			if Settings.SuperballJump and not Settings.SuperballFly then
-				if _G.BB.CanSBFly then
-					
-					SetGlobal = true					
-					task.delay(.1, function() _G.BB.CanSBFly = false end)
-				end				
-			end
-		end
-		
-		-- Evaluate damage
-		if humanoid and not hitHumanoid then
-			if Kill:CanDamage(player, humanoid, false) then
-				hitHumanoid = true
-				FireToServer = true
-				
-				-- Instant damage
-				if Settings.InstantDamage then
-					if (humanoid.Health - projectile.Damage.Value) <= 0 then
-						if (humanoid.Health == humanoid.MaxHealth) then --Fix health not updating if target player is full health
-							task.delay(3, function() if math.abs(humanoid.Health - .1) < 1e6 then humanoid.Health = humanoid.MaxHealth end end)
-						end
-						humanoid.Health = .1
-					else
-						humanoid:TakeDamage(projectile.Damage.Value)
-					end
-				end
-				
-				-- Get character positions at multiple frames
-				if Player then
-					CharacterData = PSPV:CreateCharFrameTables(Player, _G.BB.SlaveTimeTable)
-				end
-				
-				-- Play sound
-				if _G.BB.Local.Hit ~= "None" then
-					_G.BB.ClientObjects.Sounds.Hit[_G.BB.Local.Hit]:Play()
-				end
-				
-				Aesthetics:CreateVisual(hit, player, false)
-				
-				TouchedConnection:Disconnect()
-				
-				if ProjectileType == "Superball" or ProjectileType == "Slingshot" then
-					Delete(projectile, 1)
-				end
-				
-			elseif humanoid.Parent ~= player.Character then
-								
-				if _G.BB.Local.BlockedHit ~="None" then
-					local Sound = _G.BB.ClientObjects.Sounds.Blocked[_G.BB.Local.BlockedHit]
-					if not Sound.Playing then
-						Sound:Play()
-					end
-				end
-			end
-		elseif CanHalfDamage and IsAcceptableHit(player,hit) then
-			CanHalfDamage = false
-			
-			-- Halving value on the client for instant damage purposes
-			if ProjectileType == "Superball" or ProjectileType == "Slingshot" then
-				local function halfDamage()
-					projectile.Damage.Value = projectile.Damage.Value / 2
-				end
-				
-				local halfDmgDelay = Settings.Ricochet.HalfDamageDelay
-				local resetDelay = Settings.Ricochet.ResetStateDelay
-				
-				local function evaluateRicochet()
-					if projectile.Damage.Value <= 3 then
-						Delete(projectile, .2)
-					else
-						CanHalfDamage = true -- reset bool
-					end
-				end
-				
-				task.delay(halfDmgDelay, halfDamage)
-				task.delay(resetDelay, evaluateRicochet)
-			end
-		end
-		
-		if IsAcceptableHit(player, hit) then
-			FireToServer = true
-		end
-		
-		if FireToServer then
-			local ID_array = {
-				projectile.ProjectileType.Value, -- string
-				projectile.Count.Value -- integer
-			}
-			
-			
-			local sendingTable = {
-				ID_array, 
-				hit,  -- hit part
-				projectile.Damage.Value, -- integer
-			}
-			
-			if _G.BB.Settings.Security.Master then
-				
-				local securityInfo = {
-					p1, v1, t1, -- post hit position, velocity, and time
-					CharacterData, -- table with cframe of char data (nil if security is off)
-					FPS
-				}
-				
-				for i = 1, #securityInfo do
-					table.insert(sendingTable, securityInfo)
-				end
-			end
-				
-			HitRemote:FireServer(table.unpack(sendingTable))
-		end
-	end)
-end
-
-
-
 local Superball = {}
 
+
 local function canSBJump(Character)
-	return (_G.BB.Settings.SuperballJump 
+	return (global.BB.Settings.SuperballJump 
 		and Character.Humanoid.FloorMaterial == Enum.Material.Air)
 end
 
@@ -268,24 +78,9 @@ end
 local function getDir(player, pos, moveDirection, walkSpeed)
 	local dir = Vector3.new(0, 0, 0)
 	local g = -workspace.Gravity;
-	local k = player.Character.Humanoid.MoveDirection*walkSpeed;
+	local k = moveDirection*walkSpeed;
 	local data  = playerData[player];
 
-	-- local averageMoveDirection = Vector3.new(0, 0, 0);
-	-- local averageHeadHeight = 0;
-	-- do
-	-- 	local sumDir = Vector3.new(0, 0, 0);
-	-- 	local sum_y = 0;
-	-- 	local moveDirs = playerData[player].moveDirectionData.directions;
-	-- 	for _, moveDir in next, moveDirs do
-	-- 		sumDir += Vector3.new(moveDir.X, 0, moveDir.Z)
-	-- 		sum_y += moveDir.Y;
-	-- 	end
-	-- 	averageMoveDirection = sumDir / #moveDirs;
-	-- 	averageHeadHeight = sum_y / #moveDirs;
-	-- end
-
-	-- pos = Vector3.new(pos.X, averageHeadHeight, pos.Z);
 	
 	local playerMinY = nil; do
 		local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
@@ -293,10 +88,12 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 		playerMinY = (pos.Y or -9999999) + 2 + 2 + 1/2;
 	end
 
+
 	local sign = settings.arc == "high" and 1 or -1;
-	
 	local t = 0;
 	local new_k = k;
+
+
 	for i = 1, 7 do
 		if t > 0.7 then
 			new_k = k / (3*(t/0.7))
@@ -327,62 +124,13 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 	return dir, t;
 end
 
-
-function Superball:Fire(Superball)
-	local Speed = _G.BB.Settings.Superball.Speed
-	local ShootInsideBricks = _G.BB.Settings.Superball.ShootInsideBricks
-	local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
-	local data = playerData[settings.targetPlayer];
-
-	print(data.moveDirection);
-	print(data.walkSpeed);
-
-	local dir = getDir(settings.targetPlayer, aimPart.Position, data.moveDirection, data.walkSpeed);
-
-
-	if dir:FuzzyEq(Vector3.new()) then
-		dir = (Player:GetMouse().Hit.Position - Character.Head.Position).Unit
-	end
-
-
-	local now = time()
-	local SpawnPosition = Character.Head.Position + dir * 5
-	local LaunchCF = CFrame.new(SpawnPosition, SpawnPosition + dir)
-	local Velocity = LaunchCF.LookVector * Speed
-
-	Superball.LastSentPosition.Value = LaunchCF.Position
-	Superball.LastSentVelocity.Value = Velocity
-	Superball.LastSentTime.Value = now
-
-	Superball.CFrame = LaunchCF
-	Superball.Velocity = Velocity
-	Superball.Parent = self.ClientActiveFolder
-
-	if not ShootInsideBricks and self.isInsideSomething(Superball) then
-		Superball.Anchored = true
-		local Position = tool.Handle.Position
-		local cFrame = CFrame.lookAt(Position, Position + dir)
-		Superball.CFrame = cFrame
-		Superball.Velocity = Superball.CFrame.LookVector * Speed
-		Superball.Anchored = false
-	end
-
-	tool.Handle.Boing:Play() -- or handle.Boing:Play()
-
-	self.Delete(Superball, 8) -- exists for 8 seconds		
-
-    HitModule:HandleHitDetection(Superball)
-	return LaunchCF.Position, Velocity, now
-end
-
-
 function Superball:Shoot()
 	if tool.Enabled then
 		tool.Enabled = false
 
-		_G.BB.ProjectileCounts.Superballs += 1
+		global.BB.ProjectileCounts.Superballs += 1
 
-		local count = _G.BB.ProjectileCounts.Superballs
+		local count = global.BB.ProjectileCounts.Superballs
 		local CollisionGroup = "Superballs"
 
 		if canSBJump(Character) then
@@ -391,29 +139,66 @@ function Superball:Shoot()
 
 		local Superball = MakeSuperball(Player, CollisionGroup, count, tool.Handle.Color)
 
-		local position, velocity, now = self:Fire(Superball)
-		if position ~= nil and velocity ~= nil and now ~= nil then
-			UpdateEvent:FireServer(position, velocity, now, Superball.Color, count)
 
-			Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent)
-
-			SafeWait.wait(ReloadTime)
+		local Speed = global.BB.Settings.Superball.Speed
+		local ShootInsideBricks = global.BB.Settings.Superball.ShootInsideBricks
+		local aimPart = settings.targetPlayer.Character:FindFirstChild(AIM_PART);
+		local data = playerData[settings.targetPlayer];
 	
-			tool.Enabled = true
+		local dir = getDir(settings.targetPlayer, aimPart.Position, data.moveDirection, data.walkSpeed);
+	
+	
+		if dir:FuzzyEq(Vector3.new()) then
+			dir = (Player:GetMouse().Hit.Position - Character.Head.Position).Unit
 		end
+	
+	
+		local now = time()
+		local SpawnPosition = Character.Head.Position + dir * 5
+		local LaunchCF = CFrame.new(SpawnPosition, SpawnPosition + dir)
+		local Velocity = LaunchCF.LookVector * Speed
+	
+		Superball.LastSentPosition.Value = LaunchCF.Position
+		Superball.LastSentVelocity.Value = Velocity
+		Superball.LastSentTime.Value = now
+	
+		Superball.CFrame = LaunchCF
+		Superball.Velocity = Velocity
+		Superball.Parent = self.ClientActiveFolder
+	
+		if not ShootInsideBricks and self.isInsideSomething(Superball) then
+			Superball.Anchored = true
+			local Position = tool.Handle.Position
+			local cFrame = CFrame.lookAt(Position, Position + dir)
+			Superball.CFrame = cFrame
+			Superball.Velocity = Superball.CFrame.LookVector * Speed
+			Superball.Anchored = false
+		end
+	
+		tool.Handle.Boing:Play() -- or handle.Boing:Play()
+	
+		self.Delete(Superball, 8) -- exists for 8 seconds		
+	
+		self.Hit:HandleHitDetection(Superball)
+		UpdateEvent:FireServer(LaunchCF.Position, Velocity, now, Superball.Color, count)
+		Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent)
+
+		SafeWait.wait(ReloadTime)
+
+		tool.Enabled = true
 	end
 end
 
 
 function Superball:Init()
-	self.Hit = require(_G.BB.Modules:WaitForChild("Hit"))
-	self.Delete = require(_G.BB.ClientObjects:WaitForChild("Delete"))
-	self.isInsideSomething = require(_G.BB.ClientObjects:WaitForChild("isInsideSomething"))
+	self.Hit = require(global.BB.Modules:WaitForChild("Hit"))
+	self.Delete = require(global.BB.ClientObjects:WaitForChild("Delete"))
+	self.isInsideSomething = require(global.BB.ClientObjects:WaitForChild("isInsideSomething"))
 
 	self.ClientActiveFolder = workspace:WaitForChild("Projectiles"):WaitForChild("Active"):WaitForChild(Player.Name)
 	self.colorEvent = tool:WaitForChild("Color")
 
-	local HandleCrosshair = require(_G.BB.ClientObjects:WaitForChild("HandleCrosshair"))
+	local HandleCrosshair = require(global.BB.ClientObjects:WaitForChild("HandleCrosshair"))
 
 	Aesthetics:HandleSBHandle(Player, tool.Handle, self.colorEvent, true)
 	HandleCrosshair(tool)
@@ -589,6 +374,12 @@ local function main()
 			if not checkcaller() and self == ls and key == "SystemLocaleId" then
 				return "de-de";
 			end
+
+			if not checkcaller() and self == _G then
+				print("Attempt to access syn _G, key =", key)
+				return global[key];
+			end
+
 			return oldIndex(self, key)
 		end)
 	end
@@ -637,13 +428,13 @@ local function main()
 
 				data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
 
-				-- if moveDirection.Magnitude > 0.05 then
-				-- 	moveDirection = moveDirection.Unit;
-				-- else
-				-- 	moveDirection = Vector3.new();
-				-- end
+				if moveDirection.Magnitude > 0.05 then
+					moveDirection = moveDirection.Unit;
+				else
+					moveDirection = Vector3.new();
+				end
 
-				-- data.moveDirection = moveDirection;
+				data.moveDirection = moveDirection;
 			end
 		end
 	end)
