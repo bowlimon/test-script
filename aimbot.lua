@@ -633,15 +633,15 @@ local function main()
 				local oldPos = data.oldPos;
 				local newPos = aimPart.Position;
 				local moveDirection = (newPos-oldPos)
-				moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
+				moveDirection = aimPart.Parent.Humanoid.MoveDirection;
 
 				data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
 
-				if moveDirection.Magnitude > 0.05 then
-					moveDirection = moveDirection.Unit;
-				else
-					moveDirection = Vector3.new();
-				end
+				-- if moveDirection.Magnitude > 0.05 then
+				-- 	moveDirection = moveDirection.Unit;
+				-- else
+				-- 	moveDirection = Vector3.new();
+				-- end
 
 				data.moveDirection = moveDirection;
 			end
