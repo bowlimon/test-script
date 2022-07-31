@@ -388,9 +388,10 @@ local function main()
 			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
 			local character = player.Character;
 			local humanoid = character and character:FindFirstChild("Humanoid");
-			if not aimPart or not humanoid then continue end;
-
 			local oldPos = oldPositions[player];
+			if not aimPart or not humanoid or not oldPos then continue end;
+
+			
 			local newPos = aimPart.Position;
 			local moveDirection = (newPos-oldPos)
 			moveDirection = humanoid.MoveDirection;
