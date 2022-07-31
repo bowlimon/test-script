@@ -270,10 +270,12 @@ local function main()
 			end
 
 			if not checkcaller() and self == toolModule and namecallMethod == "Fire" then
+				print("Fire was called by the script")
 				local env = getsenv(toolModule.Fire);
 				local upvalues = debug.getupvalues(env);
 				for i, upvalue in ipairs(upvalues) do
 					if typeof(upvalue) == "Vector3" and math.abs(upvalue.Magnitude - 200) < 0.01 then
+						print("Found the direction upvalue")
 						local data = playerData[settings.targetPlayer]
 						local dir = data and getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed);
 						if dir then
