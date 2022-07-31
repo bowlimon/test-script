@@ -635,7 +635,7 @@ local function main()
 				local moveDirection = (newPos-oldPos)
 				moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
 
-				data.walkSpeed = math.min(moveDirection.Magnitude/dt, 16.2);
+				data.walkSpeed = math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
 
 				if moveDirection.Magnitude > 0.05 then
 					moveDirection = moveDirection.Unit;
