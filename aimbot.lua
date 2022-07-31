@@ -33,7 +33,7 @@ local CollectionService = game:GetService("CollectionService")
 local Player = Players.LocalPlayer
 local Character = nil; --will be initialized later
 local tool = nil --will be inited later
-local toolModule = nil;
+local updateEvent = nil;
 
 
 local playerData = {}
@@ -216,7 +216,7 @@ end
 local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
-	toolModule = require(tool:WaitForChild("Client"):WaitForChild("SuperballClient"))
+	updateEvent = tool:WaitForChild("Update")
 
 
 	local dead = false;
@@ -270,8 +270,8 @@ local function main()
 				return "DE"; --germany
 			end
 
-			if not checkcaller() and self == tool:FindFirstChild("Update") and namecallMethod == "FireServer" then
-				print(event, unpack(args))
+			if not checkcaller() and self == updateEvent and namecallMethod == "FireServer" then
+				print(self, unpack(args))
 				local data = settings.targetPlayer and playerData[settings.targetPlayer];
 				local dir = getDir(settings.targetPlayer, data.newPos, data.moveDirection, data.walkSpeed)
 				local spawnPos = Player.Character.Head.Position + dir * 5;
