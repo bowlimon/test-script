@@ -686,10 +686,13 @@ local function main()
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
 
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
+		if tool.Enabled == true and input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
+			tool.Enabled = false;
 			if TOOL_TYPE == "TOB" then
 				TOB_Fire(settings.targetPlayer);
 			end
+			task.wait(2);
+			tool.Enabled = true;
 		end
 	end)
 end
