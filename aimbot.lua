@@ -292,6 +292,8 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 		local hit, pos = workspace:FindPartOnRay(r, player.Character, true, false)
 		playerMinY = (pos.Y or -9999999) + 2 + 2 + 1/2;
 	end
+
+	local sign = settings.arc == "high" and 1 or -1;
 	
 	local t = 0;
 	local new_k = k;
@@ -316,7 +318,7 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 		if discriminant < 0 then
 			return Vector3.new();
 		else
-			t = math.sqrt((-b + math.sqrt(discriminant)) / (2*a));
+			t = math.sqrt((-b + sign*math.sqrt(discriminant)) / (2*a));
 		end
 		
 		dir = Vector3.new(dx/t, dy/t - 1/2*g*t, dz/t).Unit;
