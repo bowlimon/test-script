@@ -30,6 +30,7 @@ local CollectionService = game:GetService("CollectionService")
 local Player = Players.LocalPlayer
 local Character = nil; --will be initialized later
 local tool = nil --will be inited later
+local activationEvent = nil;
 
 
 local playerData = {}
@@ -44,9 +45,8 @@ local settings = {
 }
 
 
-local function getDir(player, pos, moveDirection, walkSpeed)
+local function getDir(player, pos, g)
 	local dir = Vector3.new(0, 0, 0)
-	local g = -workspace.Gravity;
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local data  = playerData[player];
 
@@ -91,265 +91,6 @@ local function getDir(player, pos, moveDirection, walkSpeed)
 	end
 
 	return dir;
-end
-
-
-local function TOB_Fire(player)
-	local data = playerData[player]
-	if not data or not data.newPos then return end
-
-	local _G = getrenv()._G
-	local Collections = game:GetService("CollectionService")
-
-
-	local MakeSuperball = require(_G.BB.ClientObjects:WaitForChild("MakeSuperball"))
-	local Aesthetics = require(_G.BB.Modules:WaitForChild("Aesthetics"))
-	local UpdateEvent = tool:WaitForChild("Update")
-	local colorEvent = tool:WaitForChild("Color")
-
-
-	local self = {};
-	self.ClientActiveFolder = workspace:WaitForChild("Projectiles"):WaitForChild("Active"):WaitForChild(Player.Name);
-	self.handle = tool:FindFirstChild("Handle");
-	self.Head = Character:FindFirstChild("Head");
-	self.Delete = require(_G.BB.ClientObjects:WaitForChild("Delete"))
-	self.isInsideSomething = require(_G.BB.ClientObjects:WaitForChild("isInsideSomething"))
-
-	local FPS = 0
-
-	if RunService:IsClient() then
-		RunService.Stepped:Connect(
-			function(_, dt)
-				FPS = 1 / dt
-			end
-		)
-	end
-
-	local function IsAcceptableHit(player, hit)
-		return hit.Parent:FindFirstChildWhichIsA("Humanoid") or 
-			not (
-			Collections:HasTag(hit,"Projectile") 
-				or (hit.CanCollide == false) 
-				or hit.Name == "Handle"
-		)
-	end
-	
-
-	local function handleHitDetection(projectile)
-		local Delete = require(_G.BB.ClientObjects:WaitForChild("Delete"))
-		local Settings = _G.BB.Settings
-		local Kill = require(_G.BB.Modules:WaitForChild("Kill"))
-		local PSPV = require(_G.BB.Modules.Security:WaitForChild("PSPV"))
-		local HitRemote = _G.BB.Remotes:WaitForChild("Hit")
-		
-		if projectile:FindFirstChildWhichIsA("TouchTransmitter") then 
-			return 
-		end
-		
-		projectile.Ready.Value = true
-		
-		local player = Players.LocalPlayer
-		local ProjectileType = projectile.ProjectileType.Value
-		local setting = Settings[ProjectileType]
-		local damage = projectile.Damage.Value
-		
-		local CanHalfDamage = setting.RicochetDamage
-		local hitHumanoid = false
-		local SetGlobal = false
-		
-		local TouchedConnection
-		
-		TouchedConnection = projectile.Touched:Connect(function(hit)
-			
-			local humanoid = hit.Parent:FindFirstChildWhichIsA("Humanoid")
-			local Player = Players:GetPlayerFromCharacter(hit.Parent)
-	
-			local p1 = projectile.Position
-			local v1 = projectile.Velocity
-			local t1 = time()
-	
-			local CharacterData
-			local FireToServer = false
-	
-			-- Play boing sound
-			if projectile:FindFirstChild("Boing") then
-				if not projectile.Boing.IsPlaying and (damage > 12) then
-					projectile.Boing:Play()
-				end
-			end
-			
-			-- Evaluate SB fly status
-			if ProjectileType == "Superball" and (Player and Player == Players.LocalPlayer) and not SetGlobal then
-				if Settings.SuperballJump and not Settings.SuperballFly then
-					if _G.BB.CanSBFly then
-						
-						SetGlobal = true					
-						task.delay(.1, function() _G.BB.CanSBFly = false end)
-					end				
-				end
-			end
-			
-			-- Evaluate damage
-			if humanoid and not hitHumanoid then
-				if Kill:CanDamage(player, humanoid, false) then
-					hitHumanoid = true
-					FireToServer = true
-					
-					-- Instant damage
-					if Settings.InstantDamage then
-						if (humanoid.Health - projectile.Damage.Value) <= 0 then
-							if (humanoid.Health == humanoid.MaxHealth) then --Fix health not updating if target player is full health
-								task.delay(3, function() if math.abs(humanoid.Health - .1) < 1e6 then humanoid.Health = humanoid.MaxHealth end end)
-							end
-							humanoid.Health = .1
-						else
-							humanoid:TakeDamage(projectile.Damage.Value)
-						end
-					end
-					
-					-- Get character positions at multiple frames
-					if Player then
-						CharacterData = PSPV:CreateCharFrameTables(Player, _G.BB.SlaveTimeTable)
-					end
-					
-					-- Play sound
-					if _G.BB.Local.Hit ~= "None" then
-						_G.BB.ClientObjects.Sounds.Hit[_G.BB.Local.Hit]:Play()
-					end
-					
-					Aesthetics:CreateVisual(hit, player, false)
-					
-					TouchedConnection:Disconnect()
-					
-					if ProjectileType == "Superball" or ProjectileType == "Slingshot" then
-						Delete(projectile, 1)
-					end
-					
-				elseif humanoid.Parent ~= player.Character then			
-					if _G.BB.Local.BlockedHit ~="None" then
-						local Sound = _G.BB.ClientObjects.Sounds.Blocked[_G.BB.Local.BlockedHit]
-						if not Sound.Playing then
-							Sound:Play()
-						end
-					end
-				end
-			elseif CanHalfDamage and IsAcceptableHit(player,hit) then
-				CanHalfDamage = false
-				
-				-- Halving value on the client for instant damage purposes
-				if ProjectileType == "Superball" or ProjectileType == "Slingshot" then
-					local function halfDamage()
-						projectile.Damage.Value = projectile.Damage.Value / 2
-					end
-					
-					local halfDmgDelay = Settings.Ricochet.HalfDamageDelay
-					local resetDelay = Settings.Ricochet.ResetStateDelay
-					
-					local function evaluateRicochet()
-						if projectile.Damage.Value <= 3 then
-							Delete(projectile, .2)
-						else
-							CanHalfDamage = true -- reset bool
-						end
-					end
-					
-					task.delay(halfDmgDelay, halfDamage)
-					task.delay(resetDelay, evaluateRicochet)
-				end
-			end
-			
-			if FireToServer then
-				local ID_array = {
-					projectile.ProjectileType.Value, -- string
-					projectile.Count.Value -- integer
-				}
-				
-				
-				local sendingTable = {
-					ID_array, 
-					hit,  -- hit part
-					projectile.Damage.Value, -- integer
-				}
-				
-				if _G.BB.Settings.Security.Master then
-					
-					local securityInfo = {
-						p1, v1, t1, -- post hit position, velocity, and time
-						CharacterData, -- table with cframe of char data (nil if security is off)
-						FPS
-					}
-					
-					for i = 1, #securityInfo do
-						table.insert(sendingTable, securityInfo)
-					end
-				end
-					
-				HitRemote:FireServer(table.unpack(sendingTable))
-			end
-		end)
-	end
-
-
-	local function canSBJump(c)
-		return (_G.BB.Settings.SuperballJump 
-			and c.Humanoid.FloorMaterial == Enum.Material.Air 
-			and _G.BB.CanSBFly)
-	end
-
-
-	_G.BB.ProjectileCounts.Superballs += 1
-			
-	local count = _G.BB.ProjectileCounts.Superballs
-	local CollisionGroup = "Superballs" 
-	local SpawnDistance = _G.BB.Settings.Superball.SpawnDistance
-	
-	if canSBJump(Character) then
-		CollisionGroup = "JumpySuperballs"
-		SpawnDistance = 5 -- optimal spawn distance for superball jumping
-	end
-				
-	local Superball = MakeSuperball(Player, CollisionGroup, count, self.handle.Color)
-	
-	local Speed = _G.BB.Settings.Superball.Speed
-	local ShootInsideBricks = _G.BB.Settings.Superball.ShootInsideBricks
-
-	local dir = getDir(player, data.newPos, data.moveDirection, data.walkSpeed)
-
-	if dir:FuzzyEq(Vector3.new()) then
-		dir = (Player:GetMouse().Hit.Position - self.Head.Position).Unit
-	end
-	
-	local now = time()
-	local SpawnPosition = self.Head.Position + dir * SpawnDistance
-	local LaunchCF = CFrame.new(SpawnPosition, SpawnPosition + dir)
-	local Velocity = LaunchCF.LookVector * Speed
-	
-	Superball.LastSentPosition.Value = LaunchCF.Position
-	Superball.LastSentVelocity.Value = Velocity
-	Superball.LastSentTime.Value = now
-	
-	Superball.CFrame = LaunchCF
-	Superball.Velocity = Velocity
-	Superball.Parent = self.ClientActiveFolder
-	
-
-	if not ShootInsideBricks and self.isInsideSomething(Superball) then
-		Superball.Anchored = true
-		local Position = self.handle.Position
-		local cFrame = CFrame.lookAt(Position, Position + dir)
-		Superball.CFrame = cFrame
-		Superball.Velocity = Superball.CFrame.LookVector * Speed
-		Superball.Anchored = false
-	end
-	
-
-	self.handle.Boing:Play() -- or handle.Boing:Play()
-	self.Delete(Superball, 8) -- exists for 8 seconds		
-	handleHitDetection(Superball, count)
-
-
-	UpdateEvent:FireServer(LaunchCF.Position, dir * 200, now, Superball.Color, count)
-	Aesthetics:HandleSBHandle(Player, self.handle, colorEvent)
 end
 
 
@@ -458,10 +199,6 @@ local function initializePlayer(player)
 	data.lungeTime = 0;
 	data.isLungingBefore = false;
 
-	data.walkSpeed = 16.2;
-	data.moveDirection = Vector3.new();
-	data.newPos = Vector3.new();
-
 	CollectionService:AddTag(data.selectorPart, "SelectorPart")
 
 	playerData[player] = data;
@@ -471,19 +208,7 @@ end
 local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
-
-	if TOOL_TYPE == "TOB" then
-		local activationEvent = tool:WaitForChild("Activation")
-		local oldFire = nil;
-		oldFire = hookfunction(activationEvent.Fire, newcclosure(function(...)
-			print("fire() called")
-			if not checkcaller() and settings.aimbot == true and settings.targetPlayer ~= nil then
-				TOB_Fire(settings.targetPlayer);
-				return nil;
-			end
-			return oldFire(...);
-		end))
-	end
+	activationEvent = tool:WaitForChild("Activation")
 
 
 	local dead = false;
@@ -541,7 +266,13 @@ local function main()
 				return;
 			end;
 
-			return oldNameCall(self, ...)
+			if not checkcaller() and TOOL_TYPE == "TOB" and self == activationEvent and namecallMethod == "Fire" and tool.Parent == Character and settings.targetPlayer then
+				print("Activation event called")
+				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character:GetPrimaryPartCFrame().Position, -workspace.Gravity);
+				args[2] = workspace.CurrentCamera.CFrame.Position + dir;
+			end
+
+			return oldNameCall(self, unpack(args))
 		end))
 
 		local oldIndex = nil;
@@ -625,45 +356,6 @@ local function main()
 		("\nMoveDirectionMultiplier = %.2f"):format(settings.moveDirectionMultiplier).." [edit with +/-]"
 
 		gui.Enabled = not settings.panicMode;
-
-
-		local oldPositions = {};
-		local dt = 0.2;
-
-
-		for player, _ in next, playerData do
-			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
-			if not aimPart then continue end;
-			oldPositions[player] = aimPart.Position
-		end
-
-
-		task.wait(dt);
-
-		
-		for player, data in next, playerData do
-			local aimPart = player.Character and player.Character:FindFirstChild(AIM_PART);
-			local character = player.Character;
-			local humanoid = character and character:FindFirstChild("Humanoid");
-			local oldPos = oldPositions[player];
-			if not aimPart or not humanoid or not oldPos then continue end;
-
-			
-			local newPos = aimPart.Position;
-			local moveDirection = (newPos-oldPos)
-			moveDirection = humanoid.MoveDirection;
-
-			data.walkSpeed = moveDirection.Magnitude/dt --math.min(moveDirection.Magnitude/dt, settings.moveDirectionMultiplier);
-
-			if moveDirection.Magnitude > 0.05 then
-				moveDirection = moveDirection.Unit;
-			else
-				moveDirection = Vector3.new();
-			end
-
-			data.moveDirection = moveDirection;
-			data.newPos = newPos;
-		end
 	end)
 
 
@@ -686,14 +378,14 @@ local function main()
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
 
-		if tool.Enabled == true and input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
-			tool.Enabled = false;
-			if TOOL_TYPE == "TOB" then
-				TOB_Fire(settings.targetPlayer);
-			end
-			task.wait(2);
-			tool.Enabled = true;
-		end
+		-- if tool.Enabled == true and input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
+		-- 	tool.Enabled = false;
+		-- 	if TOOL_TYPE == "TOB" then
+		-- 		TOB_Fire(settings.targetPlayer);
+		-- 	end
+		-- 	task.wait(2);
+		-- 	tool.Enabled = true;
+		-- end
 	end)
 end
 
