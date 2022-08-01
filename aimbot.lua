@@ -8,8 +8,11 @@ local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.T;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
 local MOVEDIRECTION_MULTIPLIER_INCREMENT = 4;
-local AIM_PART = "Head"
-local TOOL_TYPE = _G.placeIds[game.PlaceId];
+local TOOL_TYPE = _G.placeIds and _G.placeIds[game.PlaceId] or "TOB";
+
+local allowedTools = {
+	["superball"] = true
+}
 
 
 local function create(class, properties)
@@ -26,6 +29,7 @@ end
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 local Character = nil; --will be initialized later
@@ -45,15 +49,22 @@ local settings = {
 }
 
 
-local function getDir(player, pos, g)
+local function isToolAllowed(tool)
+	return allowedTools[tool.Name:lower()] == true
+end
+
+
+local function getDir(player, pos)
+	local g = -workspace.Gravity;
 	local dir = Vector3.new(0, 0, 0)
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local data  = playerData[player];
+	local findPartOnRay = workspace.FindPartOnRay;
 
 	
 	local playerMinY = nil; do
 		local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
-		local _, pos = workspace:FindPartOnRay(r, player.Character, true, false)
+		local _, pos = findPartOnRay(workspace, r, player.Character, true, false)
 		playerMinY = (pos.Y or -9999999) + 2 + 2 + 1/2;
 	end
 
@@ -71,7 +82,7 @@ local function getDir(player, pos, g)
 		local new_t1 = math.max(0, t-time_diff)
 		local y_pred = math.max(playerMinY, pos.Y + player.Character.Torso.Velocity.y*t + 1/2*g*new_t1^2)
 		
-		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character:GetPrimaryPartCFrame().Position + 5*dir)
+		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character.Head.CFrame.Position + 5*dir)
 
 		local dx, dy, dz = d.x, d.y, d.z;
 
@@ -207,8 +218,20 @@ end
 
 local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
-	tool = Player:WaitForChild("Backpack"):WaitForChild("Superball")
-	activationEvent = tool:WaitForChild("Activation")
+
+	Character.ChildAdded:Connect(function(obj)
+		if obj:IsA("Tool") and obj:FindFirstChild("Activation") and isToolAllowed(obj) then
+			tool = obj;
+			activationEvent = tool:FindFirstChild("Activation")
+		end
+	end)
+
+	Character.ChildRemoved:Connect(function(obj)
+		if obj == tool then
+			tool = nil;
+			activationEvent = nil;
+		end
+	end)
 
 
 	local dead = false;
@@ -262,14 +285,12 @@ local function main()
 				return "DE"; --germany
 			end
 
-			if not checkcaller() and self == tool.Activation and namecallMethod == "Fire" and settings.aimbot == true and settings.targetPlayer ~= nil then
-				return;
-			end;
-
-			if not checkcaller() and TOOL_TYPE == "TOB" and self == activationEvent and namecallMethod == "Fire" and tool.Parent == Character and settings.targetPlayer then
-				print("Activation event called")
-				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character:GetPrimaryPartCFrame().Position, -workspace.Gravity);
-				args[2] = workspace.CurrentCamera.CFrame.Position + dir;
+			if not checkcaller() and TOOL_TYPE == "TOB" and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer then
+				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position);
+				if dir.FuzzyEq(dir, Vector3.new()) then
+					dir = (Player:GetMouse().Hit.Position - Player.Character.Head.Position).Unit;
+				end
+				args[2] = Player.Character.Head.Position + dir*10_000
 			end
 
 			return oldNameCall(self, unpack(args))
@@ -377,15 +398,6 @@ local function main()
 			local sign = key == Enum.KeyCode.V and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
 		end
-
-		-- if tool.Enabled == true and input.UserInputType == Enum.UserInputType.MouseButton1 and Character.Parent == workspace and tool.Parent == Character and settings.aimbot == true and settings.targetPlayer ~= nil and Character.Humanoid.Health > 0 then
-		-- 	tool.Enabled = false;
-		-- 	if TOOL_TYPE == "TOB" then
-		-- 		TOB_Fire(settings.targetPlayer);
-		-- 	end
-		-- 	task.wait(2);
-		-- 	tool.Enabled = true;
-		-- end
 	end)
 end
 
