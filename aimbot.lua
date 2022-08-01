@@ -285,7 +285,7 @@ local function main()
 				return "DE"; --germany
 			end
 
-			if not checkcaller() and TOOL_TYPE == "TOB" and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer then
+			if not checkcaller() and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer then
 				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position);
 				if dir.FuzzyEq(dir, Vector3.new()) then
 					dir = (Player:GetMouse().Hit.Position - Player.Character.Head.Position).Unit;
