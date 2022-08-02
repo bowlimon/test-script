@@ -221,6 +221,7 @@ local function updateCharVars()
 
 	Character.ChildAdded:Connect(function(obj)
 		if obj:IsA("Tool") and obj:FindFirstChild("Activation") and isToolAllowed(obj) then
+			print("ToolAdded")
 			tool = obj;
 			activationEvent = tool:FindFirstChild("Activation")
 		end
@@ -233,11 +234,8 @@ local function updateCharVars()
 		end
 	end)
 
-
-	local dead = false;
-	Character:WaitForChild("Humanoid").Died:Connect(function()
-		if dead then return end;
-		dead = true;
+	Character.AncestryChanged:Connect(function(_, parent)
+		if parent ~= nil then return end;
 		Player.CharacterAdded:Wait()
 		updateCharVars();
 	end)
@@ -286,10 +284,11 @@ local function main()
 			end
 
 			if not checkcaller() and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer then
+				print("Fire")
 				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position);
-				if dir.FuzzyEq(dir, Vector3.new()) then
-					dir = (Player:GetMouse().Hit.Position - Player.Character.Head.Position).Unit;
-				end
+				-- if dir.FuzzyEq(dir, Vector3.new()) then
+				-- 	dir = (Player.GetMouse(Player).Hit.Position - Player.Character.Head.Position).Unit;
+				-- end
 				args[2] = Player.Character.Head.Position + dir*10_000
 			end
 
