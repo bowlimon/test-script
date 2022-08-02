@@ -7,11 +7,21 @@ end
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.T;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
+local TOGGLE_RETICLE_KEY = Enum.KeyCode.LeftAlt;
+local TOGGLE_CAMERA_SNAP_KEY = Enum.KeyCode.RightAlt;
 local MOVEDIRECTION_MULTIPLIER_INCREMENT = 4;
 local TOOL_TYPE = _G.placeIds and _G.placeIds[game.PlaceId] or "TOB";
+local TOOL_NAMES = {"sword", "slingshot", "rocket", "trowel", "bomb", "superball", "paintball"}
+
 
 local allowedTools = {
-	["superball"] = true
+	["superball"] = {
+		Velocity = 200
+	},
+
+	-- ["slingshot"] = {
+	-- 	Velocity = 80
+	-- }
 }
 
 
@@ -46,15 +56,30 @@ local settings = {
 	targetPlayer = nil,
 	panicMode = false,
 	moveDirectionMultiplier = 16.2;
+	reticleEnabled = false;
+	keepTargetPosInFocus = false;
 }
 
 
-local function isToolAllowed(tool)
-	return allowedTools[tool.Name:lower()] == true
+local function getToolNameFromTool(tool)
+	if not tool then
+		return nil;
+	end
+	for _, toolName in next, TOOL_NAMES do
+		if string.find(tool.Name:lower(), toolName:lower()) then
+			return toolName;
+		end
+	end
+	return nil;
 end
 
 
-local function getDir(player, pos)
+local function getToolInfo(tool)
+	return allowedTools[getToolNameFromTool(tool)]
+end
+
+
+local function getDir(player, pos, v)
 	local g = -workspace.Gravity;
 	local dir = Vector3.new(0, 0, 0)
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
@@ -87,7 +112,7 @@ local function getDir(player, pos)
 		local dx, dy, dz = d.x, d.y, d.z;
 
 		local a = 1/4*g^2
-		local b = -200^2 - dy*g;
+		local b = -v^2 - dy*g;
 		local c = dx^2 + dy^2 + dz^2;
 
 		local discriminant = b^2 - 4*a*c;
@@ -130,7 +155,7 @@ local function initializePlayer(player)
 	local data = {};
 
 	data.selectorPart = create("Part", {
-		Size = Vector3.new(10, 150, 10),
+		Size = Vector3.new(20, 2048, 20),
 		Transparency = 0.8,
 		Material = Enum.Material.Neon,
 		CanCollide = false,
@@ -220,8 +245,7 @@ local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 
 	Character.ChildAdded:Connect(function(obj)
-		if obj:IsA("Tool") and obj:FindFirstChild("Activation") and isToolAllowed(obj) then
-			print("ToolAdded")
+		if obj:IsA("Tool") and obj:FindFirstChild("Activation") and getToolInfo(obj) ~= nil then
 			tool = obj;
 			activationEvent = tool:FindFirstChild("Activation")
 		end
@@ -250,6 +274,7 @@ local function main()
 		Parent = game:GetService("CoreGui"),
 		ResetOnSpawn = false,
 		Enabled = true,
+		IgnoreGuiInset = false,
 		DisplayOrder = 9999999999999
 	})
 
@@ -263,6 +288,28 @@ local function main()
 		TextXAlignment = Enum.TextXAlignment.Left,
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		TextColor3 = Color3.new(0, 0, 0)
+	})
+
+	local toolButtonContainer = create("Frame", {
+		Size = UDim2.new(1, 0, 0.25, 0),
+		Position = UDim2.new(0.5, 0, 0, -10),
+		AnchorPoint = Vector2.new(0.5, 1),
+		BackgroundColor3 = Color3.new(1,1,1);
+		Parent = label;
+	})
+
+	create("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 0),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = toolButtonContainer
+	})
+
+	local reticle = create("Frame", {
+		Size = UDim2.new(0, 10, 0, 10);
+		BackgroundColor3 = Color3.new(1, 0, 0),
+		Parent = gui;
 	})
 
 	--Hook game metatables
@@ -283,12 +330,11 @@ local function main()
 				return "DE"; --germany
 			end
 
-			if not checkcaller() and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer then
-				print("Fire")
-				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position);
-				-- if dir.FuzzyEq(dir, Vector3.new()) then
-				-- 	dir = (Player.GetMouse(Player).Hit.Position - Player.Character.Head.Position).Unit;
-				-- end
+			if not checkcaller() and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer and settings.aimbot == true then
+				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool).Velocity);
+				if dir.FuzzyEq(dir, Vector3.new()) then
+					dir = (Player.GetMouse(Player).Hit.Position - Player.Character.Head.Position).Unit;
+				end
 				args[2] = Player.Character.Head.Position + dir*10_000
 			end
 
@@ -339,6 +385,10 @@ local function main()
 			local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
 			if not head or not humanoid then continue end
 
+			if Player.Team ~= nil and player.Team ~= nil and player.Team == Player.Team then
+				continue;
+			end
+
 
 			if data.isLungingBefore == false and isSwordLaunching(player) == true then
 				data.isLungingBefore = true
@@ -356,7 +406,35 @@ local function main()
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
 				if settings.targetPlayer == player then
-					data.selectorPart.Color = Color3.new(0, 1, 0);
+
+					local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool) and getToolInfo(tool).Velocity or 200)
+					local targetPos = Player.Character.Head.Position + dir*10_000;
+					local outOfRange = dir:FuzzyEq(Vector3.new())
+					if settings.reticleEnabled and not outOfRange then
+						reticle.Parent = gui;
+						
+						local screenPos = workspace.CurrentCamera:WorldToScreenPoint(targetPos);
+						reticle.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+					else
+						reticle.Parent = nil;
+					end
+
+					local _, pointOnScreen = workspace.CurrentCamera:WorldToScreenPoint(targetPos)
+					if settings.keepTargetPosInFocus and not outOfRange and not pointOnScreen then
+						local headPos = Player.Character.Head.Position;
+						local zoomDist = math.min(game:GetService("StarterPlayer").CameraMaxZoomDistance, 26.3);
+						local cameraTargetPos = targetPos + Vector3.new(15, 12, 0)
+						local targetToHeadDir = (cameraTargetPos - headPos).Unit;
+						local cf = CFrame.new(headPos, headPos + targetToHeadDir);
+						local desiredCF = cf + -targetToHeadDir*zoomDist
+						local r = Ray.new(headPos, (desiredCF.Position - headPos).Unit * zoomDist);
+						local _, rayHit = workspace:FindPartOnRay(r, Player.Character, true, false);
+						workspace.CurrentCamera.CFrame = CFrame.new(rayHit, headPos)
+					else
+						workspace.CurrentCamera.CameraType = Enum.CameraType.Custom;
+					end
+
+					data.selectorPart.Color = outOfRange and Color3.fromRGB(0, 0, 0) or Color3.new(0, 1, 0);
 				else
 					data.selectorPart.Color = Color3.new(1, 0, 0);
 				end
@@ -366,6 +444,7 @@ local function main()
 			local gui = data.selectorPart.InfoGui;
 			gui.Frame.HealthBar.ProgressBar.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0);
 			gui.Frame.HealthBar.HealthLabel.Text = ("%d/%d"):format(math.round(humanoid.Health), math.round(humanoid.MaxHealth));
+			gui.Frame.Username.TextColor3 = player.Team ~= nil and player.TeamColor.Color or Color3.new(1,1,1);
 		end
 
 		label.Text =
@@ -373,13 +452,66 @@ local function main()
 		"\nAimbotEnabled = "..tostring(settings.aimbot).." ["..TOGGLE_AIMBOT_KEY.Name.."]"..
 		"\nArc = "..tostring(settings.arc).." ["..TOGGLE_ARC_KEY.Name.."]"..
 		"\nTargetPlayer = "..tostring(settings.targetPlayer and settings.targetPlayer.Name or "Nobody!")..
-		("\nMoveDirectionMultiplier = %.2f"):format(settings.moveDirectionMultiplier).." [edit with +/-]"
+		("\nMoveDirectionMultiplier = %.2f"):format(settings.moveDirectionMultiplier).." [edit with C/V]"..
+		"\nReticleEnabled = "..tostring(settings.reticleEnabled).." ["..TOGGLE_RETICLE_KEY.Name.."]"..
+		"\nKeepTargetPosInFocus = "..tostring(settings.keepTargetPosInFocus).." ["..TOGGLE_CAMERA_SNAP_KEY.Name.."]"
+
+
+		for _, child in next, toolButtonContainer:GetChildren() do
+			if child:IsA("ImageLabel") then
+				child:Destroy()
+			end
+		end
+
+		local tools = {}
+		for _, child in next, Player:WaitForChild("Backpack"):GetChildren() do
+			if child:IsA("Tool") then table.insert(tools, child) end
+		end
+
+		for _, child in next, Player.Character:GetChildren() do
+			if child:IsA("Tool") then table.insert(tools, child) end
+		end
+
+		for _, t in next, tools do
+			if t:IsA("Tool") then
+				local toolName = getToolNameFromTool(t)
+				if not toolName then continue end;
+
+				local new = Instance.new("ImageLabel")
+				new.ZIndex = toolButtonContainer.ZIndex + 1;
+				new.Size = UDim2.new(1, 0, 1, 0);
+				new.LayoutOrder = table.find(TOOL_NAMES, toolName);
+
+				create("UIAspectRatioConstraint", {
+					AspectRatio = 1;
+					Parent = new;
+				})
+
+				if t.TextureId and t.TextureId ~= "" then
+					new.Image = t.TextureId
+				else
+					create("TextLabel", {
+						TextScaled = true;
+						BackgroundTransparency = 1;
+						Font = Enum.Font.SourceSansBold;
+						TextColor3 = Color3.new(0,0,0);
+						Size = UDim2.new(1, -10, 1, -10);
+						Position = UDim2.new(0.5, 0, 0.5, 0);
+						AnchorPoint = Vector2.new(0.5, 0.5);
+						ZIndex = new.ZIndex + 1;
+						Parent = new;
+					})
+				end
+				new.BackgroundColor3 = t.Enabled == false and Color3.new(1, 0, 0) or Color3.new(0, 1, 0);
+				new.Parent = toolButtonContainer;
+			end
+		end
 
 		gui.Enabled = not settings.panicMode;
 	end)
 
 
-	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+	UserInputService.InputBegan:Connect(function(input, gpe)
 		if gpe then return end
 
 		local key = input.KeyCode;
@@ -393,6 +525,10 @@ local function main()
 				settings.aimbot = false;
 				settings.targetPlayer = nil;
 			end
+		elseif key == TOGGLE_RETICLE_KEY then
+			settings.reticleEnabled = not settings.reticleEnabled;
+		elseif key == TOGGLE_CAMERA_SNAP_KEY then
+			settings.keepTargetPosInFocus = not settings.keepTargetPosInFocus;
 		elseif key == Enum.KeyCode.C or key == Enum.KeyCode.V then
 			local sign = key == Enum.KeyCode.V and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
