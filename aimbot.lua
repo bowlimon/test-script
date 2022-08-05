@@ -385,9 +385,7 @@ local function main()
 			local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
 			if not head or not humanoid then continue end
 
-			if Player.Team ~= nil and player.Team ~= nil and player.Team == Player.Team then
-				continue;
-			end
+			local sameTeam = Player.Team ~= nil and player.Team ~= nil and player.Team == Player.Team;
 
 
 			if data.isLungingBefore == false and isSwordLaunching(player) == true then
@@ -401,7 +399,7 @@ local function main()
 				settings.targetPlayer = player;
 			end
 
-			if settings.panicMode or humanoid.Health <= 0 or character:FindFirstChildWhichIsA("ForceField", true) then
+			if settings.panicMode or humanoid.Health <= 0 or character:FindFirstChildWhichIsA("ForceField", true) or sameTeam then
 				data.selectorPart.Parent = nil;
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
