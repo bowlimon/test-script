@@ -410,8 +410,8 @@ local function main()
 					local outOfRange = dir:FuzzyEq(Vector3.new())
 					if settings.reticleEnabled and not outOfRange then
 						reticle.Parent = gui;
-						
-						local screenPos = workspace.CurrentCamera:WorldToScreenPoint(targetPos);
+						local reticleTargetPos = workspace.CurrentCamera.CFrame.Position + dir*1_000
+						local screenPos = workspace.CurrentCamera:WorldToScreenPoint(reticleTargetPos);
 						reticle.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
 					else
 						reticle.Parent = nil;
