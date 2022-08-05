@@ -57,7 +57,6 @@ local settings = {
 	panicMode = false,
 	moveDirectionMultiplier = 16.2;
 	reticleEnabled = false;
-	keepTargetPosInFocus = false;
 }
 
 
@@ -406,30 +405,14 @@ local function main()
 				if settings.targetPlayer == player then
 
 					local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool) and getToolInfo(tool).Velocity or 200)
-					local targetPos = Player.Character.Head.Position + dir*10_000;
+					local targetPos = Player.Character.Head.Position + dir*288.5;
 					local outOfRange = dir:FuzzyEq(Vector3.new())
 					if settings.reticleEnabled and not outOfRange then
 						reticle.Parent = gui;
-						local reticleTargetPos = workspace.CurrentCamera.CFrame.Position + dir*1_000
-						local screenPos = workspace.CurrentCamera:WorldToScreenPoint(reticleTargetPos);
+						local screenPos = workspace.CurrentCamera:WorldToScreenPoint(targetPos);
 						reticle.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
 					else
 						reticle.Parent = nil;
-					end
-
-					local _, pointOnScreen = workspace.CurrentCamera:WorldToScreenPoint(targetPos)
-					if settings.keepTargetPosInFocus and not outOfRange and not pointOnScreen then
-						local headPos = Player.Character.Head.Position;
-						local zoomDist = math.min(game:GetService("StarterPlayer").CameraMaxZoomDistance, 26.3);
-						local cameraTargetPos = targetPos + Vector3.new(15, 12, 0)
-						local targetToHeadDir = (cameraTargetPos - headPos).Unit;
-						local cf = CFrame.new(headPos, headPos + targetToHeadDir);
-						local desiredCF = cf + -targetToHeadDir*zoomDist
-						local r = Ray.new(headPos, (desiredCF.Position - headPos).Unit * zoomDist);
-						local _, rayHit = workspace:FindPartOnRay(r, Player.Character, true, false);
-						workspace.CurrentCamera.CFrame = CFrame.new(rayHit, headPos)
-					else
-						workspace.CurrentCamera.CameraType = Enum.CameraType.Custom;
 					end
 
 					data.selectorPart.Color = outOfRange and Color3.fromRGB(0, 0, 0) or Color3.new(0, 1, 0);
@@ -525,8 +508,6 @@ local function main()
 			end
 		elseif key == TOGGLE_RETICLE_KEY then
 			settings.reticleEnabled = not settings.reticleEnabled;
-		elseif key == TOGGLE_CAMERA_SNAP_KEY then
-			settings.keepTargetPosInFocus = not settings.keepTargetPosInFocus;
 		elseif key == Enum.KeyCode.C or key == Enum.KeyCode.V then
 			local sign = key == Enum.KeyCode.V and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
