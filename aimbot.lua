@@ -24,7 +24,7 @@ local allowedTools = {
 	-- 	Velocity = 80
 	-- }
 
-	["paintballgun"] = {
+	["paintball"] = {
 		Velocity = 200,
 		Gravity = workspace.Gravity - 60/(0.7*(4/3*math.pi*0.5^3))
 	}
