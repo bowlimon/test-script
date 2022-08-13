@@ -470,7 +470,7 @@ local function main()
 		"\nAimbotEnabled = "..tostring(settings.aimbot).." ["..TOGGLE_AIMBOT_KEY.Name.."]"..
 		"\nArc = "..tostring(settings.arc).." ["..TOGGLE_ARC_KEY.Name.."]"..
 		"\nTargetPlayer = "..tostring(settings.targetPlayer and settings.targetPlayer.Name or "Nobody!")..
-		"\nAutomaticMoveDirectionEnabled = "..tostring(settings.automaticMoveDirection).." ["..TOGGLE_AUTOMATIC_MOVEDIRECTION.."]"..
+		"\nAutomaticMoveDirectionEnabled = "..tostring(settings.automaticMoveDirection).." ["..TOGGLE_AUTOMATIC_MOVEDIRECTION.Name.."]"..
 		("\nMoveDirectionMultiplier = %.2f"):format(moveDirectionToDisplay).." [edit with C/V]"..
 		"\nReticleEnabled = "..tostring(settings.reticleEnabled).." ["..TOGGLE_RETICLE_KEY.Name.."]"
 
