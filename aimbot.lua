@@ -63,7 +63,7 @@ local settings = {
 	panicMode = false,
 	moveDirectionMultiplier = 16.2;
 	reticleEnabled = false;
-	automaticMoveDirection = false;
+	automaticMoveDirection = true;
 }
 
 
@@ -90,7 +90,7 @@ local function getDir(player, pos, v, g)
 
 	local dir = Vector3.new(0, 0, 0)
 	local data  = playerData[player];
-	local k = player.Character.Humanoid.MoveDirection*(data and data.walkSpeed or settings.moveDirectionMultiplier)
+	local k = player.Character.Humanoid.MoveDirection*(settings.automaticMoveDirection and data and data.walkSpeed or settings.moveDirectionMultiplier)
 	local findPartOnRay = workspace.FindPartOnRay;
 
 	
@@ -243,7 +243,6 @@ local function initializePlayer(player)
 	data.isLungingBefore = false;
 
 	data.walkSpeed = settings.moveDirectionMultiplier
-	data.oldPos = nil; --vector3
 
 	CollectionService:AddTag(data.selectorPart, "SelectorPart")
 
@@ -384,15 +383,16 @@ local function main()
 
 	RunService.RenderStepped:Connect(function()
 		local dt = 0.2;
+		local oldPositions = {}
 
 		for i = 1, 2 do
 			for player, data in next, playerData do
 				if not player.Character or not player.Character.PrimaryPart then continue end
 				local primaryPartPos = player.Character.PrimaryPart.Position;
 				if i == 1 then
-					data.oldPos = primaryPartPos
+					oldPositions[player] = primaryPartPos
 				else
-					local dp = (primaryPartPos - data.oldPos)
+					local dp = (primaryPartPos - oldPositions[player])
 					dp = Vector3.new(dp.x, 0, dp.z);
 					data.walkSpeed = dp.Magnitude/dt;
 				end
@@ -548,6 +548,8 @@ local function main()
 		elseif key == Enum.KeyCode.C or key == Enum.KeyCode.V then
 			local sign = key == Enum.KeyCode.V and 1 or -1;
 			settings.moveDirectionMultiplier = math.abs(settings.moveDirectionMultiplier + sign * MOVEDIRECTION_MULTIPLIER_INCREMENT)
+		elseif key == TOGGLE_AUTOMATIC_MOVEDIRECTION then
+			settings.automaticMoveDirection = not settings.automaticMoveDirection
 		end
 	end)
 end
