@@ -112,7 +112,7 @@ local function getDir(player, pos, v, g)
 		-- end
 		local time_diff = math.max(0, 0.4 + data.lungeTime - tick())
 		local new_t1 = math.max(0, t-time_diff)
-		local y_pred = math.max(playerMinY, pos.Y + player.Character.PrimaryPart.Velocity.y*t + 1/2*workspace.Gravity*new_t1^2)
+		local y_pred = math.max(playerMinY, pos.Y + player.Character.PrimaryPart.Velocity.y*t + 1/2*-workspace.Gravity*new_t1^2)
 		
 		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character.Head.CFrame.Position + 5*dir)
 
