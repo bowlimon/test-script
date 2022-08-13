@@ -8,7 +8,7 @@ local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.T;
 local TOGGLE_PANIC_MODE_KEY = Enum.KeyCode.Z;
 local TOGGLE_RETICLE_KEY = Enum.KeyCode.LeftAlt;
-local TOGGLE_CAMERA_SNAP_KEY = Enum.KeyCode.RightAlt;
+local TOGGLE_AUTOMATIC_MOVEDIRECTION = Enum.KeyCode.RightAlt;
 local MOVEDIRECTION_MULTIPLIER_INCREMENT = 4;
 local TOOL_TYPE = _G.placeIds and _G.placeIds[game.PlaceId] or "TOB";
 local TOOL_NAMES = {"sword", "slingshot", "rocket", "trowel", "bomb", "superball", "paintball"}
@@ -63,6 +63,7 @@ local settings = {
 	panicMode = false,
 	moveDirectionMultiplier = 16.2;
 	reticleEnabled = false;
+	automaticMoveDirection = false;
 }
 
 
@@ -86,9 +87,10 @@ end
 
 local function getDir(player, pos, v, g)
 	g = -g;
+
 	local dir = Vector3.new(0, 0, 0)
-	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local data  = playerData[player];
+	local k = player.Character.Humanoid.MoveDirection*(data and data.walkSpeed or settings.moveDirectionMultiplier)
 	local findPartOnRay = workspace.FindPartOnRay;
 
 	
@@ -110,7 +112,7 @@ local function getDir(player, pos, v, g)
 		-- end
 		local time_diff = math.max(0, 0.4 + data.lungeTime - tick())
 		local new_t1 = math.max(0, t-time_diff)
-		local y_pred = math.max(playerMinY, pos.Y + player.Character.PrimaryPart.Velocity.y*t + 1/2*g*new_t1^2)
+		local y_pred = math.max(playerMinY, pos.Y + player.Character.PrimaryPart.Velocity.y*t + 1/2*workspace.Gravity*new_t1^2)
 		
 		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character.Head.CFrame.Position + 5*dir)
 
@@ -239,6 +241,9 @@ local function initializePlayer(player)
 
 	data.lungeTime = 0;
 	data.isLungingBefore = false;
+
+	data.walkSpeed = settings.moveDirectionMultiplier
+	data.oldPos = nil; --vector3
 
 	CollectionService:AddTag(data.selectorPart, "SelectorPart")
 
@@ -378,6 +383,29 @@ local function main()
 
 
 	RunService.RenderStepped:Connect(function()
+		local dt = 0.2;
+
+		for i = 1, 2 do
+			for player, data in next, playerData do
+				if not player.Character or not player.Character.PrimaryPart then continue end
+				local primaryPartPos = player.Character.PrimaryPart.Position;
+				if i == 1 then
+					data.oldPos = primaryPartPos
+				else
+					local dp = (primaryPartPos - data.oldPos)
+					dp = Vector3.new(dp.x, 0, dp.z);
+					data.walkSpeed = dp.Magnitude/dt;
+				end
+			end
+
+			if i == 1 then
+				task.wait(dt)
+			end
+		end
+	end)
+
+
+	RunService.RenderStepped:Connect(function()
 		local mouseTarget = Player:GetMouse().Target;
 
 		if not mouseTarget or not CollectionService:HasTag(mouseTarget, "SelectorPart") then
@@ -435,14 +463,16 @@ local function main()
 			gui.Frame.Username.TextColor3 = player.Team ~= nil and player.TeamColor.Color or Color3.new(1,1,1);
 		end
 
+		local moveDirectionToDisplay = settings.automaticMoveDirection and settings.targetPlayer and playerData[settings.targetPlayer].walkSpeed or settings.moveDirectionMultiplier
+
 		label.Text =
 		"\nPanicMode = "..tostring(settings.panicMode).." ["..TOGGLE_PANIC_MODE_KEY.Name.."]"..
 		"\nAimbotEnabled = "..tostring(settings.aimbot).." ["..TOGGLE_AIMBOT_KEY.Name.."]"..
 		"\nArc = "..tostring(settings.arc).." ["..TOGGLE_ARC_KEY.Name.."]"..
 		"\nTargetPlayer = "..tostring(settings.targetPlayer and settings.targetPlayer.Name or "Nobody!")..
-		("\nMoveDirectionMultiplier = %.2f"):format(settings.moveDirectionMultiplier).." [edit with C/V]"..
-		"\nReticleEnabled = "..tostring(settings.reticleEnabled).." ["..TOGGLE_RETICLE_KEY.Name.."]"..
-		"\nKeepTargetPosInFocus = "..tostring(settings.keepTargetPosInFocus).." ["..TOGGLE_CAMERA_SNAP_KEY.Name.."]"
+		"\nAutomaticMoveDirectionEnabled = "..tostring(settings.automaticMoveDirection).." ["..TOGGLE_AUTOMATIC_MOVEDIRECTION.."]"..
+		("\nMoveDirectionMultiplier = %.2f"):format(moveDirectionToDisplay).." [edit with C/V]"..
+		"\nReticleEnabled = "..tostring(settings.reticleEnabled).." ["..TOGGLE_RETICLE_KEY.Name.."]"
 
 
 		for _, child in next, toolButtonContainer:GetChildren() do
