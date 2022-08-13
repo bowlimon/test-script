@@ -16,12 +16,18 @@ local TOOL_NAMES = {"sword", "slingshot", "rocket", "trowel", "bomb", "superball
 
 local allowedTools = {
 	["superball"] = {
-		Velocity = 200
+		Velocity = 200,
+		Gravity = workspace.Gravity
 	},
 
 	-- ["slingshot"] = {
 	-- 	Velocity = 80
 	-- }
+
+	["paintballgun"] = {
+		Velocity = 200,
+		Gravity = workspace.Gravity - 60/(0.7*(4/3*math.pi*0.5^3))
+	}
 }
 
 
@@ -78,8 +84,8 @@ local function getToolInfo(tool)
 end
 
 
-local function getDir(player, pos, v)
-	local g = -workspace.Gravity;
+local function getDir(player, pos, v, g)
+	local g = -g;
 	local dir = Vector3.new(0, 0, 0)
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local data  = playerData[player];
@@ -330,7 +336,7 @@ local function main()
 			end
 
 			if not checkcaller() and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer and settings.aimbot == true then
-				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool).Velocity);
+				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool).Velocity, getToolInfo(tool).Gravity);
 				if dir.FuzzyEq(dir, Vector3.new()) then
 					dir = (Player.GetMouse(Player).Hit.Position - Player.Character.Head.Position).Unit;
 				end
@@ -404,7 +410,7 @@ local function main()
 				data.selectorPart.CFrame = CFrame.new(head.Position)
 				if settings.targetPlayer == player then
 
-					local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool) and getToolInfo(tool).Velocity or 200)
+					local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool) and getToolInfo(tool).Velocity or 200, getToolInfo(tool).Gravity)
 					local targetPos = Player.Character.Head.Position + dir*288.5;
 					local outOfRange = dir:FuzzyEq(Vector3.new())
 					if settings.reticleEnabled and not outOfRange then
