@@ -85,7 +85,7 @@ end
 
 
 local function getDir(player, pos, v, g)
-	local g = -g;
+	g = -g;
 	local dir = Vector3.new(0, 0, 0)
 	local k = player.Character.Humanoid.MoveDirection*settings.moveDirectionMultiplier;
 	local data  = playerData[player];
@@ -409,19 +409,20 @@ local function main()
 			else
 				data.selectorPart.CFrame = CFrame.new(head.Position)
 				if settings.targetPlayer == player then
-
-					local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool) and getToolInfo(tool).Velocity or 200, getToolInfo(tool).Gravity)
-					local targetPos = Player.Character.Head.Position + dir*288.5;
-					local outOfRange = dir:FuzzyEq(Vector3.new())
-					if settings.reticleEnabled and not outOfRange then
-						reticle.Parent = gui;
-						local screenPos = workspace.CurrentCamera:WorldToScreenPoint(targetPos);
-						reticle.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
-					else
-						reticle.Parent = nil;
+					local toolInfo = getToolInfo(tool)
+					if toolInfo then
+						local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, toolInfo.Velocity, toolInfo.Gravity)
+						local targetPos = Player.Character.Head.Position + dir*288.5;
+						local outOfRange = dir:FuzzyEq(Vector3.new())
+						if settings.reticleEnabled and not outOfRange then
+							reticle.Parent = gui;
+							local screenPos = workspace.CurrentCamera:WorldToScreenPoint(targetPos);
+							reticle.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+						else
+							reticle.Parent = nil;
+						end
+						data.selectorPart.Color = outOfRange and Color3.fromRGB(0, 0, 0) or Color3.new(0, 1, 0);
 					end
-
-					data.selectorPart.Color = outOfRange and Color3.fromRGB(0, 0, 0) or Color3.new(0, 1, 0);
 				else
 					data.selectorPart.Color = Color3.new(1, 0, 0);
 				end
