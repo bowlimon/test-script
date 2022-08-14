@@ -128,7 +128,7 @@ local function getDir(player, pos, v, g)
 			local _, pos = findPartOnRay(workspace, r, player.Character, true, false)
 			local offset = player.Character.Head.Position.Y - bodyPart.Position.Y;
 
-			playerMinY = math.max(pos + offset, playerMinY)
+			playerMinY = math.max(pos.Y + offset, playerMinY)
 		end
 	end
 
