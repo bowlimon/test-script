@@ -1,4 +1,21 @@
 
+--[[
+
+	aimbot.lua
+
+	A few things to note:
+
+	-When we shoot at a player who is sword-jumping, it tends to work best when we shoot as quickly as possible so the mathematics work.
+
+	-Climbing needs fixed as it appears that target characters don't have an upwards velocity whilst climbing.
+
+	-We need a way to filter out targets so the screen doesn't become too cluttered with expanded hitboxes. Not too sure how to handle this.
+	Or perhaps we just need a better method of selecting targets.
+
+--]]
+
+
+
 if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
@@ -94,10 +111,25 @@ local function getDir(player, pos, v, g)
 	local findPartOnRay = workspace.FindPartOnRay;
 
 	
-	local playerMinY = nil; do
-		local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
-		local _, pos = findPartOnRay(workspace, r, player.Character, true, false)
-		playerMinY = (pos.Y or -9999999) + 2 + 2 + 1/2;
+	local playerMinY = -999999999; do
+		local parts = {
+			"Right Leg",
+			"Left Leg",
+			"Torso",
+			"LeftFoot",
+			"RightFoot"
+		}
+
+		for _, bodyPart in next, parts do
+			bodyPart = player.Character:FindFirstChild(bodyPart)
+			if not bodyPart then continue end
+
+			local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
+			local _, pos = findPartOnRay(workspace, r, player.Character, true, false)
+			local offset = player.Character.Head.Position.Y - bodyPart.Position.Y;
+
+			playerMinY = math.max(pos + offset, playerMinY)
+		end
 	end
 
 
@@ -160,10 +192,11 @@ local function initializePlayer(player)
 	if player == Player then return end
 
 	local data = {};
+	local selectorPartWidth = 14;
 
 	data.selectorPart = create("Part", {
-		Size = Vector3.new(20, 2048, 20),
-		Transparency = 0.8,
+		Size = Vector3.new(selectorPartWidth, 2048, selectorPartWidth),
+		Transparency = 0.9,
 		Material = Enum.Material.Neon,
 		CanCollide = false,
 		Anchored = true
