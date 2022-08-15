@@ -20,6 +20,11 @@ if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 
+repeat
+	print("Waiting for settings and BB table")
+	task.wait()
+until getrenv()._G ~= nil and getrenv()._G.BB ~= nil and getrenv()._G.BB.Settings ~= nil;
+
 
 local TOGGLE_AIMBOT_KEY = Enum.KeyCode.X;
 local TOGGLE_ARC_KEY = Enum.KeyCode.T;
@@ -30,11 +35,14 @@ local MOVEDIRECTION_MULTIPLIER_INCREMENT = 4;
 local TOOL_TYPE = _G.placeIds and _G.placeIds[game.PlaceId] or "TOB";
 local TOOL_NAMES = {"sword", "slingshot", "rocket", "trowel", "bomb", "superball", "paintball"}
 
+local BB_Settings = getrenv()._G.BB.Settings;
+
 
 local allowedTools = {
 	["superball"] = {
 		Velocity = 200,
-		Gravity = workspace.Gravity
+		Gravity = workspace.Gravity;
+		SpawnDistance = nil; --to be defined
 	},
 
 	-- ["slingshot"] = {
@@ -43,7 +51,8 @@ local allowedTools = {
 
 	["paintball"] = {
 		Velocity = 200,
-		Gravity = workspace.Gravity - 60/(0.7*(4/3*math.pi*0.5^3))
+		Gravity = workspace.Gravity - 60/(0.7*(4/3*math.pi*0.5^3));
+		SpawnDistance = nil; --to be defined
 	}
 }
 
@@ -102,13 +111,18 @@ local function getToolInfo(tool)
 end
 
 
-local function getDir(player, pos, v, g)
-	g = -g;
+local function getDir(player, pos, tool)
+	--TREAD CAREFULLY: IF THERE IS SOME WEIRD ERROR, YOU MIGHT HAVE CALLED A METHOD WITH : RATHER THAN . WITHIN THE NAMECALL CALLSTACK, WHICH IS A NO-NO
+	--FOR SOME WEIRD REASON.
+
+	local toolInfo = getToolInfo(tool)
+
+	local g = -toolInfo.Gravity;
+	local v = toolInfo.Velocity;
 
 	local dir = Vector3.new(0, 0, 0)
 	local data  = playerData[player];
 	local k = player.Character.Humanoid.MoveDirection*(settings.automaticMoveDirection and data and data.walkSpeed or settings.moveDirectionMultiplier)
-	local findPartOnRay = workspace.FindPartOnRay;
 
 	
 	local playerMinY = -999999999; do
@@ -120,12 +134,12 @@ local function getDir(player, pos, v, g)
 			"RightFoot"
 		}
 
-		for _, bodyPart in next, parts do
-			bodyPart = player.Character:FindFirstChild(bodyPart)
+		for _, bodyPartName in next, parts do
+			local bodyPart = player.Character.FindFirstChild(player.Character, bodyPartName)
 			if not bodyPart then continue end
 
 			local r = Ray.new(pos, Vector3.new(0, -1, 0) * 2000)
-			local _, pos = findPartOnRay(workspace, r, player.Character, true, false)
+			local _, pos = workspace.FindPartOnRay(workspace, r, player.Character, true, false)
 			local offset = player.Character.Head.Position.Y - bodyPart.Position.Y;
 
 			playerMinY = math.max(pos.Y + offset, playerMinY)
@@ -146,7 +160,7 @@ local function getDir(player, pos, v, g)
 		local new_t1 = math.max(0, t-time_diff)
 		local y_pred = math.max(playerMinY, pos.Y + player.Character.PrimaryPart.Velocity.y*t + 1/2*-workspace.Gravity*new_t1^2)
 		
-		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character.Head.CFrame.Position + 5*dir)
+		local d = (new_k*t + Vector3.new(pos.X, y_pred, pos.Z)) - (Character.Head.CFrame.Position + toolInfo.SpawnDistance*dir)
 
 		local dx, dy, dz = d.x, d.y, d.z;
 
@@ -312,6 +326,11 @@ local function main()
 	updateCharVars();
 
 
+	--seriously why is this shit even changed???
+	allowedTools["superball"].SpawnDistance = BB_Settings.Superball.SpawnDistance;
+	allowedTools["paintball"].SpawnDistance = BB_Settings.PaintballGun.SpawnDistance;
+
+
 	local gui = create("ScreenGui", {
 		Parent = game:GetService("CoreGui"),
 		ResetOnSpawn = false,
@@ -373,7 +392,7 @@ local function main()
 			end
 
 			if not checkcaller() and self == activationEvent and namecallMethod == "Fire" and tool and tool.Parent == Character and settings.targetPlayer and settings.aimbot == true then
-				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, getToolInfo(tool).Velocity, getToolInfo(tool).Gravity);
+				local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, tool);
 				if dir.FuzzyEq(dir, Vector3.new()) then
 					dir = (Player.GetMouse(Player).Hit.Position - Player.Character.Head.Position).Unit;
 				end
@@ -424,7 +443,7 @@ local function main()
 				local primaryPartPos = player.Character.PrimaryPart.Position;
 				if i == 1 then
 					oldPositions[player] = primaryPartPos
-				else
+				elseif oldPositions[player] then
 					local dp = (primaryPartPos - oldPositions[player])
 					dp = Vector3.new(dp.x, 0, dp.z);
 					data.walkSpeed = dp.Magnitude/dt;
@@ -472,7 +491,7 @@ local function main()
 				if settings.targetPlayer == player then
 					local toolInfo = getToolInfo(tool)
 					if toolInfo then
-						local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, toolInfo.Velocity, toolInfo.Gravity)
+						local dir = getDir(settings.targetPlayer, settings.targetPlayer.Character.Head.Position, tool)
 						local targetPos = Player.Character.Head.Position + dir*288.5;
 						local outOfRange = dir:FuzzyEq(Vector3.new())
 						if settings.reticleEnabled and not outOfRange then
