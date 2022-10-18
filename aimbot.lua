@@ -301,7 +301,7 @@ local function updateCharVars()
 	Character = Player.Character or Player.CharacterAdded:Wait();
 
 	Character.ChildAdded:Connect(function(obj)
-		local event = obj:FindFirstChild("Activation_Remote");
+		local event = obj:FindFirstChild("Activation");
 		if obj:IsA("Tool") and event and getToolInfo(obj) ~= nil then
 			tool = obj;
 			activationEvent = event;
